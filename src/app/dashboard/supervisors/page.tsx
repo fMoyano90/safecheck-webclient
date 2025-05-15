@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import SupervisorsList from '@/components/supervisors/SupervisorsList';
 import SupervisorForm from '@/components/supervisors/SupervisorForm';
+import AssignWorkersModal from '@/components/supervisors/AssignWorkersModal';
 import { isAuthenticated, isAdmin } from '@/lib/auth';
 import { 
   getSupervisors, 
@@ -12,6 +13,7 @@ import {
   updateSupervisor, 
   pauseSupervisor,
   reactivateSupervisor,
+  assignWorkerToSupervisor,
   Supervisor,
   SupervisorFormData
 } from '@/lib/api/supervisors';
@@ -24,6 +26,8 @@ export default function SupervisorsPage() {
   const [currentSupervisor, setCurrentSupervisor] = useState<Supervisor | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAssignWorkersModalOpen, setIsAssignWorkersModalOpen] = useState(false);
+  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated() || !isAdmin()) {
@@ -77,6 +81,21 @@ export default function SupervisorsPage() {
 
   const handleViewSupervisor = (supervisor: Supervisor) => {
     console.log('Ver supervisor:', supervisor);
+  };
+
+  const handleAssignWorkers = (supervisor: Supervisor) => {
+    setSelectedSupervisor(supervisor);
+    setIsAssignWorkersModalOpen(true);
+  };
+
+  const handleAssignWorkerToSupervisor = async (supervisorId: number, workerId: number) => {
+    try {
+      await assignWorkerToSupervisor(supervisorId, workerId);
+      return Promise.resolve();
+    } catch (err) {
+      console.error('Error al asignar trabajador:', err);
+      return Promise.reject(err);
+    }
   };
 
   const handlePauseSupervisor = async (supervisorId: number) => {
@@ -166,13 +185,23 @@ export default function SupervisorsPage() {
           onCancel={handleFormCancel}
         />
       ) : (
-        <SupervisorsList
-          supervisors={supervisors}
-          onView={handleViewSupervisor}
-          onEdit={handleEditSupervisor}
-          onPause={handlePauseSupervisor}
-          onReactivate={handleReactivateSupervisor}
-        />
+        <>
+          <SupervisorsList
+            supervisors={supervisors}
+            onView={handleViewSupervisor}
+            onEdit={handleEditSupervisor}
+            onPause={handlePauseSupervisor}
+            onReactivate={handleReactivateSupervisor}
+            onAssignWorkers={handleAssignWorkers}
+          />
+          
+          <AssignWorkersModal
+            supervisor={selectedSupervisor}
+            isOpen={isAssignWorkersModalOpen}
+            onClose={() => setIsAssignWorkersModalOpen(false)}
+            onAssign={handleAssignWorkerToSupervisor}
+          />
+        </>
       )}
     </DashboardLayout>
   );

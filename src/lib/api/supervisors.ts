@@ -228,3 +228,33 @@ export async function reactivateSupervisor(id: number) {
   
   return await response.json();
 }
+
+/**
+ * Asignar un trabajador a un supervisor
+ */
+export async function assignWorkerToSupervisor(supervisorId: number, workerId: number) {
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('No hay token de autenticación');
+  }
+  
+  // Enviamos solo el workerId como espera el backend
+  const response = await fetch(`${API_URL}/api/v1/supervisors/${supervisorId}/workers`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ 
+      workerId: workerId.toString()
+    }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Error al asignar el trabajador al supervisor');
+  }
+  
+  return await response.json();
+}
