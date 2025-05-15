@@ -11,6 +11,7 @@ import {
   createSupervisor, 
   updateSupervisor, 
   pauseSupervisor,
+  reactivateSupervisor,
   Supervisor,
   SupervisorFormData
 } from '@/lib/api/supervisors';
@@ -25,7 +26,6 @@ export default function SupervisorsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Verificar autenticación y permisos de administrador
     if (!isAuthenticated() || !isAdmin()) {
       router.push('/');
       return;
@@ -40,12 +40,9 @@ export default function SupervisorsPage() {
       setError(null);
       const data = await getSupervisors();
       
-      // Asegurarse de que data sea un array
       if (Array.isArray(data)) {
         setSupervisors(data);
       } else if (data && typeof data === 'object') {
-        // Si la API devuelve un objeto con una propiedad que contiene el array
-        // Por ejemplo: { items: [...], total: 10 }
         const possibleArrayProps = Object.keys(data).find(key => Array.isArray(data[key]));
         if (possibleArrayProps) {
           setSupervisors(data[possibleArrayProps]);
@@ -79,7 +76,6 @@ export default function SupervisorsPage() {
   };
 
   const handleViewSupervisor = (supervisor: Supervisor) => {
-    // Implementar vista detallada si es necesario
     console.log('Ver supervisor:', supervisor);
   };
 
@@ -87,11 +83,21 @@ export default function SupervisorsPage() {
     try {
       setError(null);
       await pauseSupervisor(supervisorId);
-      // Actualizar la lista de supervisores
       fetchSupervisors();
     } catch (err) {
       console.error('Error al pausar supervisor:', err);
       setError('No se pudo pausar el supervisor. Intente nuevamente.');
+    }
+  };
+
+  const handleReactivateSupervisor = async (supervisorId: number) => {
+    try {
+      setError(null);
+      await reactivateSupervisor(supervisorId);
+      fetchSupervisors();
+    } catch (err) {
+      console.error('Error al reactivar supervisor:', err);
+      setError('No se pudo reactivar el supervisor. Intente nuevamente.');
     }
   };
 
@@ -104,7 +110,6 @@ export default function SupervisorsPage() {
         await createSupervisor(supervisorData);
       }
       
-      // Cerrar formulario y actualizar lista
       setIsFormOpen(false);
       fetchSupervisors();
     } catch (err) {
@@ -166,6 +171,7 @@ export default function SupervisorsPage() {
           onView={handleViewSupervisor}
           onEdit={handleEditSupervisor}
           onPause={handlePauseSupervisor}
+          onReactivate={handleReactivateSupervisor}
         />
       )}
     </DashboardLayout>

@@ -6,6 +6,7 @@ interface SupervisorsListProps {
   onView: (supervisor: Supervisor) => void;
   onEdit: (supervisor: Supervisor) => void;
   onPause: (supervisorId: number) => void;
+  onReactivate: (supervisorId: number) => void;
 }
 
 export default function SupervisorsList({
@@ -13,11 +14,8 @@ export default function SupervisorsList({
   onView,
   onEdit,
   onPause,
+  onReactivate,
 }: SupervisorsListProps) {
-  // Log para depuración
-  console.log('SupervisorsList recibió:', supervisors);
-  
-  // Verificar que supervisors sea un array
   const supervisorsArray = Array.isArray(supervisors) ? supervisors : [];
   
   if (!supervisorsArray.length) {
@@ -146,7 +144,7 @@ export default function SupervisorsList({
                         />
                       </svg>
                     </button>
-                    {supervisor.isActive && (
+                    {supervisor.isActive ? (
                       <button
                         onClick={() => onPause(supervisor.id)}
                         className="text-red-600 hover:text-red-900"
@@ -158,6 +156,27 @@ export default function SupervisorsList({
                             strokeLinejoin="round"
                             strokeWidth={2}
                             d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onReactivate(supervisor.id)}
+                        className="text-green-600 hover:text-green-900"
+                        title="Reactivar"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
                       </button>

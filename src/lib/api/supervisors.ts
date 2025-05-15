@@ -32,9 +32,6 @@ export interface SupervisorFormData {
   isActive?: boolean;
 }
 
-/**
- * Obtener todos los supervisores
- */
 export async function getSupervisors(): Promise<Supervisor[]> {
   const token = getAuthToken();
   
@@ -42,7 +39,7 @@ export async function getSupervisors(): Promise<Supervisor[]> {
     throw new Error('No hay token de autenticación');
   }
   
-  const response = await fetch(`${API_URL}/api/v1/users?role=supervisor`, {
+  const response = await fetch(`${API_URL}/api/v1/users/debug/all`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -53,29 +50,39 @@ export async function getSupervisors(): Promise<Supervisor[]> {
     throw new Error(error.message || 'Error al obtener supervisores');
   }
   
-  const data = await response.json();
+  const responseData = await response.json();
   
-  // Log para depuración
-  console.log('Respuesta de la API de supervisores:', JSON.stringify(data, null, 2));
-  
-  // Asegurarse de que la respuesta sea un array
-  if (Array.isArray(data)) {
-    console.log('La respuesta es un array con', data.length, 'elementos');
-    return data;
-  } else if (data && typeof data === 'object') {
-    console.log('La respuesta es un objeto con propiedades:', Object.keys(data));
-    // Algunos APIs devuelven { items: [...], total: X }
-    for (const key of Object.keys(data)) {
-      if (Array.isArray(data[key])) {
-        console.log('Se encontró un array en la propiedad', key, 'con', data[key].length, 'elementos');
-        return data[key];
-      }
+  let allUsers = [];
+  if (responseData && responseData.success && responseData.data) {
+    if (Array.isArray(responseData.data)) {
+      allUsers = responseData.data;
+    } else if (responseData.data.data && Array.isArray(responseData.data.data)) {
+      allUsers = responseData.data.data;
     }
   }
   
-  // Si no se encontró un array, devolver un array vacío
-  console.warn('La respuesta de la API no contiene un array de supervisores:', data);
-  return [];
+  interface UserWithRole {
+    id: number;
+    role?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    position?: string;
+    isActive?: boolean;
+    companyId?: number;
+    rut?: string;
+    emergencyContactPhone?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    [key: string]: string | number | boolean | undefined;
+  }
+
+  const supervisors = allUsers.filter((user: UserWithRole) => 
+    user.role && user.role.toLowerCase() === 'supervisor'
+  );
+  
+  return supervisors;
 }
 
 /**

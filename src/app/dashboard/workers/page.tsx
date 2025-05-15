@@ -40,15 +40,18 @@ export default function WorkersPage() {
       setError(null);
       const data = await getWorkers();
       
-      // Asegurarse de que data sea un array
       if (Array.isArray(data)) {
         setWorkers(data);
       } else if (data && typeof data === 'object') {
-        // Si la API devuelve un objeto con una propiedad que contiene el array
-        // Por ejemplo: { items: [...], total: 10 }
-        const possibleArrayProps = Object.keys(data).find(key => Array.isArray(data[key]));
-        if (possibleArrayProps) {
-          setWorkers(data[possibleArrayProps]);
+        const dataAsRecord = data as unknown as Record<string, unknown>;
+        const possibleArrayProps = Object.keys(dataAsRecord).find(key => 
+          Array.isArray(dataAsRecord[key])
+        );
+        
+        if (possibleArrayProps === 'data' && 'data' in data) {
+          setWorkers(data.data);
+        } else if (possibleArrayProps) {
+          setWorkers(dataAsRecord[possibleArrayProps] as Worker[]);
         } else {
           console.error('La respuesta de la API no contiene un array:', data);
           setWorkers([]);
