@@ -6,10 +6,10 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { isAuthenticated, isAdmin } from "@/lib/auth";
 import {
   createTemplate,
-  getCategories,
   QuestionType,
   TemplateType,
 } from "@/lib/api/templates";
+import { getCategories } from "@/lib/api/categories";
 import BasicInfo from "@/components/checklists/BasicInfo";
 import SectionItem from "@/components/checklists/SectionItem";
 import {
@@ -61,7 +61,7 @@ export default function CreateChecklistPage() {
       const categoriesData = await getCategories();
       setCategories(categoriesData);
       if (categoriesData.length > 0) {
-        setFormData((prev) => ({ ...prev, categoryId: categoriesData[0].id }));
+        setFormData((prev) => ({ ...prev, categoryId: categoriesData[0].id.toString() }));
       }
     } catch (err) {
       console.error("Error al cargar categorías:", err);
@@ -71,6 +71,12 @@ export default function CreateChecklistPage() {
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handleCategoryCreated = (newCategory: Category) => {
+    // Añadir la nueva categoría a la lista y seleccionarla
+    setCategories(prev => [...prev, newCategory]);
+    setFormData(prev => ({ ...prev, categoryId: newCategory.id.toString() }));
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -290,6 +296,7 @@ export default function CreateChecklistPage() {
             formData={formData}
             categories={categories}
             onInputChange={handleInputChange}
+            onCategoryCreated={handleCategoryCreated}
           />
 
           {/* Secciones y preguntas */}
