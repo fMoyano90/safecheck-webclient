@@ -30,7 +30,8 @@ const QuestionTypeFields: React.FC<QuestionTypeFieldsProps> = ({
             type="number"
             value={question.maxLength || ''}
             onChange={(e) => onQuestionChange(sectionIndex, questionIndex, 'maxLength', parseInt(e.target.value))}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            className="mt-1 block w-full px-4 py-2 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-black"
+            style={{ backgroundColor: '#f9f9f9' }}
           />
         </div>
       );
@@ -44,7 +45,8 @@ const QuestionTypeFields: React.FC<QuestionTypeFieldsProps> = ({
               type="number"
               value={question.min || ''}
               onChange={(e) => onQuestionChange(sectionIndex, questionIndex, 'min', parseInt(e.target.value))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+              className="mt-1 block w-full px-4 py-2 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-black"
+              style={{ backgroundColor: '#f9f9f9' }}
             />
           </div>
           <div>
@@ -53,7 +55,19 @@ const QuestionTypeFields: React.FC<QuestionTypeFieldsProps> = ({
               type="number"
               value={question.max || ''}
               onChange={(e) => onQuestionChange(sectionIndex, questionIndex, 'max', parseInt(e.target.value))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+              className="mt-1 block w-full px-4 py-2 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-black"
+              style={{ backgroundColor: '#f9f9f9' }}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Unidad</label>
+            <input
+              type="text"
+              value={question.unit || ''}
+              onChange={(e) => onQuestionChange(sectionIndex, questionIndex, 'unit', e.target.value)}
+              placeholder="Ej: kg, m, litros"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-black"
+              style={{ backgroundColor: '#f9f9f9' }}
             />
           </div>
         </>

@@ -128,9 +128,9 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary text-black"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary text-black"
                 placeholder="Nombre de la categoría"
-                style={{ backgroundColor: '#f0f0f0' }}
+                style={{ backgroundColor: '#f9f9f9' }}
                 required
               />
             </div>
@@ -144,9 +144,9 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary text-black"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary text-black"
                 placeholder="Descripción de la categoría (opcional)"
-                style={{ backgroundColor: '#f0f0f0' }}
+                style={{ backgroundColor: '#f9f9f9' }}
               />
             </div>
 
@@ -167,9 +167,9 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
                   name="color"
                   value={formData.color}
                   onChange={handleInputChange}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary text-black"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary text-black"
                   placeholder="#000000"
-                  style={{ backgroundColor: '#f0f0f0' }}
+                  style={{ backgroundColor: '#f9f9f9' }}
                 />
               </div>
             </div>

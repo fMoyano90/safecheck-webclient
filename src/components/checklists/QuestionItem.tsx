@@ -49,7 +49,8 @@ const QuestionItem: React.FC<QuestionItemProps> = ({
             value={question.text}
             onChange={(e) => onQuestionChange(sectionIndex, questionIndex, 'text', e.target.value)}
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            className="mt-1 block w-full px-4 py-2 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-black"
+            style={{ backgroundColor: '#f9f9f9' }}
           />
         </div>
         

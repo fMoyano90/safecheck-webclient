@@ -52,7 +52,8 @@ const SectionItem: React.FC<SectionItemProps> = ({
             value={section.title}
             onChange={(e) => onSectionChange(sectionIndex, 'title', e.target.value)}
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            className="mt-1 block w-full px-4 py-2 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-black"
+            style={{ backgroundColor: '#f9f9f9' }}
           />
         </div>
         <div>
@@ -61,7 +62,8 @@ const SectionItem: React.FC<SectionItemProps> = ({
             value={section.description}
             onChange={(e) => onSectionChange(sectionIndex, 'description', e.target.value)}
             rows={2}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            className="mt-1 block w-full px-4 py-2 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-black"
+            style={{ backgroundColor: '#f9f9f9' }}
           />
         </div>
       </div>

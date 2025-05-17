@@ -27,7 +27,8 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, categories, onInputChan
             value={formData.name}
             onChange={onInputChange}
             required
-            className="mt-1 block w-full h-[38px] rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            className="mt-1 block w-full h-[38px] px-3 py-2 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-black"
+            style={{ backgroundColor: '#f9f9f9' }}
           />
         </div>
         <div>
@@ -39,7 +40,8 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, categories, onInputChan
                 value={formData.categoryId}
                 onChange={onInputChange}
                 required
-                className="block w-full h-[38px] rounded-md rounded-r-none border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                className="block w-full h-[38px] px-3 py-2 rounded-md rounded-r-none border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-black"
+                style={{ backgroundColor: '#f9f9f9' }}
               >
                 {categories.map(category => (
                   <option key={category.id} value={category.id}>
@@ -67,7 +69,8 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, categories, onInputChan
             value={formData.description}
             onChange={onInputChange}
             rows={3}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            className="mt-1 block w-full px-3 py-2 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-black"
+            style={{ backgroundColor: '#f9f9f9' }}
           />
         </div>
       </div>
