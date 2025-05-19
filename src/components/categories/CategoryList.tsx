@@ -17,13 +17,28 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory,
   const handleToggleStatus = async (category: Category) => {
     try {
       setLoading(prev => ({ ...prev, [category.id]: true }));
-      await updateCategoryStatus(category.id, !category.is_active);
+      console.log(`Enviando petición PUT a /categories/${category.id}/status con isActive=${!category.is_active}`);
+      
+      // Llamar a la API para cambiar el estado
+      const updatedCategory = await updateCategoryStatus(category.id, !category.is_active);
+      console.log('Respuesta de actualización de estado:', updatedCategory);
+      
+      // Refrescar la lista de categorías
       onRefresh();
     } catch (err) {
       console.error('Error al cambiar estado de categoría:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Error al cambiar estado de categoría';
-      setError(errorMessage);
-      setTimeout(() => setError(''), 3000);
+      
+      // Mejorar el mensaje de error para ser más descriptivo
+      let errorMessage = '';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else {
+        errorMessage = 'Error al cambiar estado de categoría';
+      }
+      
+      // Mostrar mensaje de error más amigable
+      setError(`${errorMessage}. Verifique que la categoría exista y tenga permisos para modificarla.`);
+      setTimeout(() => setError(''), 5000); // Aumentar tiempo para leer el mensaje
     } finally {
       setLoading(prev => ({ ...prev, [category.id]: false }));
     }
@@ -100,11 +115,11 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory,
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    category.is_active 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
+                    category.is_active === false 
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-green-100 text-green-800'
                   }`}>
-                    {category.is_active ? 'Activa' : 'Inactiva'}
+                    {category.is_active === false ? 'Inactiva' : 'Activa'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

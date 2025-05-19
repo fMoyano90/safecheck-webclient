@@ -61,7 +61,7 @@ export default function CreateChecklistPage() {
       const categoriesData = await getCategories();
       setCategories(categoriesData);
       if (categoriesData.length > 0) {
-        setFormData((prev) => ({ ...prev, categoryId: categoriesData[0].id.toString() }));
+        setFormData((prev) => ({ ...prev, categoryId: categoriesData[0].id }));
       }
     } catch (err) {
       console.error("Error al cargar categorías:", err);
@@ -76,7 +76,7 @@ export default function CreateChecklistPage() {
   const handleCategoryCreated = (newCategory: Category) => {
     // Añadir la nueva categoría a la lista y seleccionarla
     setCategories(prev => [...prev, newCategory]);
-    setFormData(prev => ({ ...prev, categoryId: newCategory.id.toString() }));
+    setFormData(prev => ({ ...prev, categoryId: newCategory.id }));
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -242,6 +242,8 @@ export default function CreateChecklistPage() {
       // Preparar datos para enviar
       const templateData = {
         ...formData,
+        // Asegurar que categoryId sea un número
+        categoryId: typeof formData.categoryId === 'string' ? parseInt(formData.categoryId, 10) : formData.categoryId,
         structure: { sections },
       };
 

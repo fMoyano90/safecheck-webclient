@@ -5,6 +5,31 @@ import { Category } from '@/types';
 // URL base para las peticiones a la API
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3030';
 
+// Definir un tipo para la estructura de categoría que viene del backend
+interface BackendCategory {
+  id: number;
+  company_id: number;
+  name: string;
+  description?: string;
+  created_at: string;
+  color?: string;
+  isActive?: boolean;
+  is_active?: boolean;
+  updated_at: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+// Función para transformar una categoría del backend al formato del frontend
+const transformCategory = (category: BackendCategory): Category => {
+  // Invertimos la lógica para priorizar isActive sobre is_active
+  const activeStatus = category.isActive !== undefined ? category.isActive : (category.is_active || false);
+  
+  return {
+    ...category,
+    is_active: activeStatus
+  };
+};
+
 /**
  * Obtener todas las categorías disponibles
  */
@@ -30,10 +55,13 @@ export async function getCategories(): Promise<Category[]> {
   
   // Manejar la estructura de respuesta del backend
   if (responseData && responseData.success && responseData.data !== undefined) {
-    return responseData.data;
+    // Transformar cada categoría para asegurar que isActive se mapee a is_active
+    return responseData.data.map(transformCategory);
   } else {
-    // Si la respuesta no tiene la estructura esperada, devolver la respuesta completa
-    return responseData;
+    // Si la respuesta no tiene la estructura esperada, transformar la respuesta completa
+    return Array.isArray(responseData) 
+      ? responseData.map(transformCategory)
+      : responseData;
   }
 }
 
@@ -69,10 +97,10 @@ export async function createCategory(data: {
   
   // Manejar la estructura de respuesta del backend
   if (responseData && responseData.success && responseData.data !== undefined) {
-    return responseData.data;
+    return transformCategory(responseData.data);
   } else {
-    // Si la respuesta no tiene la estructura esperada, devolver la respuesta completa
-    return responseData;
+    // Si la respuesta no tiene la estructura esperada, devolver la respuesta transformada
+    return transformCategory(responseData);
   }
 }
 
@@ -83,6 +111,7 @@ export async function updateCategory(id: number, data: {
   name?: string;
   description?: string;
   color?: string;
+  isActive?: boolean;
 }): Promise<Category> {
   const token = getAuthToken();
   
@@ -90,26 +119,42 @@ export async function updateCategory(id: number, data: {
     throw new Error('No hay token de autenticación');
   }
   
-  const response = await fetch(`${API_URL}/api/v1/categories/${id}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
+  // Convertir el formato de los datos para que coincida con el backend
+  const backendData = {
+    name: data.name,
+    description: data.description,
+    color: data.color,
+    isActive: data.isActive
+  };
   
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Error al actualizar la categoría');
-  }
-  
-  const responseData = await response.json();
-  
-  if (responseData && responseData.success && responseData.data !== undefined) {
-    return responseData.data;
-  } else {
-    return responseData;
+  try {
+    const response = await fetch(`${API_URL}/api/v1/categories/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(backendData),
+    });
+    
+    if (!response.ok) {
+      // Intentar obtener el mensaje de error del backend
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error de respuesta:', response.status, errorData);
+      throw new Error(errorData.message || `Error al actualizar la categoría: ${response.status}`);
+    }
+    
+    const responseData = await response.json();
+    
+    // Transformar la respuesta del backend al formato esperado por el frontend
+    if (responseData) {
+      return transformCategory(responseData);
+    } else {
+      return responseData;
+    }
+  } catch (error) {
+    console.error('Error al actualizar categoría:', error);
+    throw error;
   }
 }
 
@@ -123,26 +168,33 @@ export async function updateCategoryStatus(id: number, isActive: boolean): Promi
     throw new Error('No hay token de autenticación');
   }
   
-  const response = await fetch(`${API_URL}/api/v1/categories/${id}/status`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ is_active: isActive }),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `Error al ${isActive ? 'activar' : 'desactivar'} la categoría`);
-  }
-  
-  const responseData = await response.json();
-  
-  if (responseData && responseData.success && responseData.data !== undefined) {
-    return responseData.data;
-  } else {
-    return responseData;
+  try {
+    const response = await fetch(`${API_URL}/api/v1/categories/${id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ isActive }), // El backend espera isActive en camelCase
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      console.error('Error de respuesta:', response.status, error);
+      throw new Error(error.message || `Error al ${isActive ? 'activar' : 'desactivar'} la categoría: ${response.status}`);
+    }
+    
+    const responseData = await response.json();
+    
+    // Transformar la respuesta del backend al formato esperado por el frontend
+    if (responseData) {
+      return transformCategory(responseData);
+    } else {
+      return responseData;
+    }
+  } catch (error) {
+    console.error(`Error al ${isActive ? 'activar' : 'desactivar'} categoría:`, error);
+    throw error;
   }
 }
 

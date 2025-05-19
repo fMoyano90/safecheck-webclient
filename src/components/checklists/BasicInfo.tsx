@@ -6,7 +6,7 @@ interface BasicInfoProps {
   formData: {
     name: string;
     description: string;
-    categoryId: string;
+    categoryId: string | number;
   };
   categories: Category[];
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;

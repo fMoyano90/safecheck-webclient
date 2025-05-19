@@ -42,6 +42,6 @@ export interface Section {
 export interface FormData {
   name: string;
   description: string;
-  categoryId: string;
+  categoryId: string | number;
   type: TemplateType;
 }

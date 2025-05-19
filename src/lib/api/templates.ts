@@ -1,5 +1,6 @@
 // API service para la gestión de templates (checklists)
 import { getAuthToken } from '../auth';
+import { Category } from '@/types';
 
 // URL base para las peticiones a la API
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3030';
@@ -100,7 +101,7 @@ export interface CreateTemplateData {
   description?: string;
   type: TemplateType;
   structure?: TemplateStructure;
-  categoryId: string;
+  categoryId: number;
 }
 
 export interface UpdateTemplateData {
@@ -326,7 +327,7 @@ export async function deleteTemplate(id: number): Promise<void> {
 /**
  * Obtener todas las categorías disponibles
  */
-export async function getCategories(): Promise<any[]> {
+export async function getCategories(): Promise<Category[]> {
   const token = getAuthToken();
   
   if (!token) {
