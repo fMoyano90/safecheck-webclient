@@ -1,34 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { isAuthenticated, isAdmin } from '@/lib/auth';
-import { getTemplates, deleteTemplate, updateTemplateStatus } from '@/lib/api/templates';
+import { getTemplates, deleteTemplate, updateTemplateStatus, Template, TemplateType } from '@/lib/api/templates';
 
 export default function ChecklistsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [checklists, setChecklists] = useState<any[]>([]);
+  const [checklists, setChecklists] = useState<Template[]>([]);
   const [error, setError] = useState('');
   const [filterActive, setFilterActive] = useState(true);
 
-  useEffect(() => {
-    // Verificar autenticación y permisos de administrador
-    if (!isAuthenticated() || !isAdmin()) {
-      router.push('/');
-      return;
-    }
-
-    fetchChecklists();
-  }, [router, filterActive]);
-
-  const fetchChecklists = async () => {
+  const fetchChecklists = useCallback(async () => {
     try {
       setLoading(true);
       const templates = await getTemplates({ 
-        type: 'checklist',
+        type: TemplateType.CHECKLIST,
         isActive: filterActive
       });
       // Asegurarse de que templates sea un array
@@ -41,9 +31,19 @@ export default function ChecklistsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterActive]);  // Dependencias de fetchChecklists
 
-  const handleToggleStatus = async (id, currentStatus) => {
+  useEffect(() => {
+    // Verificar autenticación y permisos de administrador
+    if (!isAuthenticated() || !isAdmin()) {
+      router.push('/');
+      return;
+    }
+
+    fetchChecklists();
+  }, [router, fetchChecklists]);
+
+  const handleToggleStatus = async (id: number, currentStatus: boolean) => {
     try {
       await updateTemplateStatus(id, !currentStatus);
       fetchChecklists();
@@ -53,7 +53,7 @@ export default function ChecklistsPage() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: number) => {
     if (window.confirm('¿Está seguro que desea eliminar este checklist? Esta acción no se puede deshacer.')) {
       try {
         await deleteTemplate(id);
@@ -125,8 +125,8 @@ export default function ChecklistsPage() {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 table-auto">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -149,19 +149,19 @@ export default function ChecklistsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {checklists.map((checklist) => (
                 <tr key={checklist.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{checklist.name}</div>
-                    <div className="text-sm text-gray-500">{checklist.description}</div>
+                    <div className="text-sm text-gray-500 max-w-xs truncate" title={checklist.description}>{checklist.description}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">{checklist.category?.name || 'Sin categoría'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
                       {checklist.structure?.sections?.length || 0} secciones
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       checklist.isActive 
                         ? 'bg-green-100 text-green-800' 
