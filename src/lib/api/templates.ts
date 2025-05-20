@@ -101,7 +101,7 @@ export interface CreateTemplateData {
   description?: string;
   type: TemplateType;
   structure?: TemplateStructure;
-  categoryId: number;
+  categoryId: string;
 }
 
 export interface UpdateTemplateData {
@@ -205,6 +205,8 @@ export async function createTemplate(data: CreateTemplateData): Promise<Template
   if (!token) {
     throw new Error('No hay token de autenticación');
   }
+
+  console.log('Payload enviado a createTemplate:', JSON.stringify(data, null, 2));
   
   const response = await fetch(`${API_URL}/api/v1/templates`, {
     method: 'POST',

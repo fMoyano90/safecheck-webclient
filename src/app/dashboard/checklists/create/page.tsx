@@ -1,11 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { isAuthenticated, isAdmin } from "@/lib/auth";
+import { isAuthenticated, isAdmin, getAuthToken } from "@/lib/auth";
 import {
-  createTemplate,
   QuestionType,
   TemplateType,
 } from "@/lib/api/templates";
@@ -239,16 +239,94 @@ export default function CreateChecklistPage() {
     try {
       setSubmitting(true);
 
-      // Preparar datos para enviar
-      const templateData = {
-        ...formData,
-        // Asegurar que categoryId sea un número
-        categoryId: typeof formData.categoryId === 'string' ? parseInt(formData.categoryId, 10) : formData.categoryId,
-        structure: { sections },
+      // Crear una copia limpia de los datos para enviar al backend
+      // Convertir directamente a formato JSON para evitar problemas de tipo
+      const rawData = {
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        // Asegurarse de que categoryId sea un string (UUID)
+        categoryId: String(formData.categoryId),
+        structure: {
+          sections: sections.map(section => ({
+            id: section.id,
+            title: section.title,
+            description: section.description || "",
+            questions: section.questions.map(question => {
+              // Crear un objeto base con propiedades comunes
+              const q: any = {
+                id: question.id,
+                text: question.text,
+                type: question.type,
+                required: Boolean(question.required)
+              };
+              
+              // Añadir instrucciones si existen
+              if (question.instructions) {
+                q.instructions = question.instructions;
+              }
+              
+              // Añadir propiedades específicas según el tipo
+              if (question.type === QuestionType.TEXT_INPUT || question.type === QuestionType.TEXT_AREA) {
+                if (question.maxLength) q.maxLength = Number(question.maxLength);
+                if (question.placeholder) q.placeholder = String(question.placeholder);
+              } 
+              else if (question.type === QuestionType.NUMBER) {
+                if (question.min !== undefined) q.min = Number(question.min);
+                if (question.max !== undefined) q.max = Number(question.max);
+                if (question.unit) q.unit = String(question.unit);
+              } 
+              else if (question.type === QuestionType.SINGLE_CHOICE || question.type === QuestionType.MULTIPLE_CHOICE) {
+                if (question.options && Array.isArray(question.options)) {
+                  q.options = question.options.map(opt => ({
+                    value: String(opt.value),
+                    label: String(opt.label)
+                  }));
+                }
+              } 
+              else if (question.type === QuestionType.DATE || question.type === QuestionType.TIME) {
+                if (question.minDate) q.minDate = String(question.minDate);
+                if (question.maxDate) q.maxDate = String(question.maxDate);
+              } 
+              else if (question.type === QuestionType.PHOTO) {
+                if (question.maxPhotos) q.maxPhotos = Number(question.maxPhotos);
+              }
+              
+              return q;
+            })
+          }))
+        }
       };
 
-      // Enviar datos a la API
-      await createTemplate(templateData);
+      // Convertir a JSON y luego volver a objeto para eliminar propiedades no serializables
+      const jsonString = JSON.stringify(rawData);
+      const templateData = JSON.parse(jsonString);
+
+      console.log('Datos a enviar:', JSON.stringify(templateData, null, 2));
+
+      // Obtener el token de autenticación usando la función correcta
+      const token = getAuthToken();
+      
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+      
+      // Enviar datos a la API usando la función directamente con los datos JSON
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3030'}/api/v1/templates`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: jsonString,
+      }).then(async response => {
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Error del servidor:', errorData);
+          throw new Error(errorData.message || 'Error al crear el checklist');
+        }
+        return response.json();
+      });
 
       setSuccess("Checklist creado exitosamente");
 

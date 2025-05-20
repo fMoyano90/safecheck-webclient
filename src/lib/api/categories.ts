@@ -26,6 +26,7 @@ const transformCategory = (category: BackendCategory): Category => {
   
   return {
     ...category,
+    id: String(category.id), // Convertir id a string
     is_active: activeStatus
   };
 };
