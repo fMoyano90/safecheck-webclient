@@ -17,10 +17,8 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory,
   const handleToggleStatus = async (category: Category) => {
     try {
       setLoading(prev => ({ ...prev, [category.id]: true }));
-      console.log(`Enviando petición PUT a /categories/${category.id}/status con isActive=${!category.is_active}`);
-      
       // Llamar a la API para cambiar el estado
-      const updatedCategory = await updateCategoryStatus(category.id, !category.is_active);
+      const updatedCategory = await updateCategoryStatus(Number(category.id), !category.is_active);
       console.log('Respuesta de actualización de estado:', updatedCategory);
       
       // Refrescar la lista de categorías
@@ -138,7 +136,7 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory,
                       {loading[category.id] ? 'Procesando...' : category.is_active ? 'Desactivar' : 'Activar'}
                     </button>
                     <button
-                      onClick={() => handleDeleteCategory(category.id)}
+                      onClick={() => handleDeleteCategory(Number(category.id))}
                       disabled={loading[category.id]}
                       className="text-red-600 hover:text-red-900 disabled:opacity-50"
                     >

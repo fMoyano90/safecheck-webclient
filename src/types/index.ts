@@ -3,7 +3,7 @@
 import { QuestionType, TemplateType } from "@/lib/api/templates";
 
 export interface Category {
-  id: string; // Cambiado de number a string para soportar UUIDs
+  id: string;
   company_id: number;
   name: string;
   description?: string;

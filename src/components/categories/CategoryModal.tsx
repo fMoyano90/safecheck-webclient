@@ -60,24 +60,20 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
       
       if (editingCategory) {
         // Actualizar categoría existente
-        console.log(`Enviando petición PUT a /categories/${editingCategory.id}`);
-        resultCategory = await updateCategory(editingCategory.id, {
+        resultCategory = await updateCategory(Number(editingCategory.id), {
           name: formData.name,
           description: formData.description,
           color: formData.color,
           // Mantener el estado actual si estamos editando
           isActive: editingCategory.is_active
         });
-        console.log('Respuesta de actualización:', resultCategory);
       } else {
         // Crear nueva categoría
-        console.log('Enviando petición POST a /categories');
         resultCategory = await createCategory({
           name: formData.name,
           description: formData.description,
           color: formData.color
         });
-        console.log('Respuesta de creación:', resultCategory);
       }
       
       // Notificar al componente padre sobre la categoría creada/actualizada

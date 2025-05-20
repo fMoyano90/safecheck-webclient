@@ -242,8 +242,6 @@ export async function createTemplate(data: CreateTemplateData): Promise<Template
     data = processedData;
   }
 
-  console.log('Payload enviado a createTemplate:', JSON.stringify(data, null, 2));
-  
   // Serializar manualmente a JSON y enviarlo como string para evitar problemas
   const serializedData = JSON.stringify(data);
   
@@ -265,7 +263,6 @@ export async function createTemplate(data: CreateTemplateData): Promise<Template
   
   // Manejar la estructura de respuesta del backend
   if (responseData && responseData.success && responseData.data !== undefined) {
-    console.log('Respuesta del backend:', JSON.stringify(responseData.data, null, 2));
     return responseData.data;
   } else {
     // Si la respuesta no tiene la estructura esperada, devolver la respuesta completa
@@ -319,8 +316,6 @@ export async function updateTemplate(id: number, data: UpdateTemplateData): Prom
     data = processedData;
   }
 
-  console.log('[UPDATE] Payload a enviar:', JSON.stringify(data, null, 2));
-  
   // Serializar manualmente a JSON y enviarlo como string para evitar problemas
   const serializedData = JSON.stringify(data);
   
@@ -342,7 +337,6 @@ export async function updateTemplate(id: number, data: UpdateTemplateData): Prom
   
   // Manejar la estructura de respuesta del backend
   if (responseData && responseData.success && responseData.data !== undefined) {
-    console.log('[UPDATE] Respuesta del backend:', JSON.stringify(responseData.data, null, 2));
     return responseData.data;
   } else {
     // Si la respuesta no tiene la estructura esperada, devolver la respuesta completa

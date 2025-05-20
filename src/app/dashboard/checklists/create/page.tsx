@@ -189,9 +189,6 @@ export default function CreateChecklistPage() {
             };
             const updatedOptions = [...currentOptions, newOption];
             
-            // Log para ver las opciones que se están estableciendo para esta pregunta específica
-            console.log(`addOption - Opciones actualizadas para pregunta ${qIdx} en sección ${sIdx}:`, JSON.stringify(updatedOptions, null, 2));
-            
             return {
               ...question,
               options: updatedOptions,
@@ -227,10 +224,6 @@ export default function CreateChecklistPage() {
     setError("");
     setSuccess("");
 
-    // Log CRÍTICO: ¿Qué ve handleSubmit en el estado 'sections'?
-    console.log('handleSubmit - INICIO - sections state:', JSON.stringify(sections, null, 2));
-
-    // Validar que haya al menos una pregunta en cada sección
     const invalidSection = sections.find(
       (section) => section.questions.length === 0
     );
@@ -241,7 +234,6 @@ export default function CreateChecklistPage() {
       return;
     }
 
-    // Validar que todas las preguntas tengan texto
     for (const section of sections) {
       const invalidQuestion = section.questions.find(
         (question) => !question.text.trim()
@@ -253,7 +245,6 @@ export default function CreateChecklistPage() {
         return;
       }
 
-      // Validar opciones para preguntas de selección
       for (const question of section.questions) {
         if (
           (question.type === QuestionType.SINGLE_CHOICE ||
@@ -278,25 +269,6 @@ export default function CreateChecklistPage() {
 
       const sectionsCopy = JSON.parse(JSON.stringify(sections));
       
-      console.log('handleSubmit - ANTES DE MAPEAR (sectionsCopy):', JSON.stringify(sectionsCopy, null, 2));
-      
-      // Verificar las opciones en preguntas de selección
-      sectionsCopy.forEach((section: Section, sIndex: number) => {
-        section.questions.forEach((question: Question, qIndex: number) => {
-          if (
-            (question.type === QuestionType.SINGLE_CHOICE || 
-             question.type === QuestionType.MULTIPLE_CHOICE) &&
-            question.options
-          ) {
-            console.log(
-              `handleSubmit - Sección ${sIndex}, Pregunta ${qIndex}, tipo ${question.type}, opciones:`, 
-              JSON.stringify(question.options, null, 2)
-            );
-          }
-        });
-      });
-
-      // Crear una copia limpia de los datos para enviar al backend
       const rawData = {
         name: formData.name,
         description: formData.description,
@@ -308,7 +280,6 @@ export default function CreateChecklistPage() {
             title: section.title,
             description: section.description || "",
             questions: section.questions.map((question: Question) => {
-              // Crear un objeto base con propiedades comunes
               const q: any = {
                 id: question.id,
                 text: question.text,
@@ -334,7 +305,6 @@ export default function CreateChecklistPage() {
               else if (question.type === QuestionType.SINGLE_CHOICE || question.type === QuestionType.MULTIPLE_CHOICE) {
                 // Asegurar que se copian todas las opciones
                 if (question.options && Array.isArray(question.options)) {
-                  console.log('handleSubmit - MAPEANDO OPCIONES:', JSON.stringify(question.options, null, 2));
                   q.options = [...question.options].map(opt => ({
                     value: String(opt.value),
                     label: String(opt.label)
@@ -357,9 +327,6 @@ export default function CreateChecklistPage() {
 
       // Convertir a JSON y luego volver a objeto para eliminar propiedades no serializables
       const jsonString = JSON.stringify(rawData);
-      const templateData = JSON.parse(jsonString);
-
-      console.log('handleSubmit - Datos a enviar:', JSON.stringify(templateData, null, 2));
 
       // Obtener el token de autenticación usando la función correcta
       const token = getAuthToken();

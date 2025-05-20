@@ -47,8 +47,6 @@ export async function getWorkers(page = 1, limit = 10): Promise<PaginatedRespons
     throw new Error('No hay token de autenticación');
   }
   
-  console.log('Token de autenticación:', token);
-  
   // Asegurarnos de enviar el parámetro role=trabajador y añadir isActive=true para ver solo trabajadores activos
   const response = await fetch(`${API_URL}/api/v1/users?role=trabajador&isActive=true&page=${page}&limit=${limit}`, {
     headers: {
@@ -56,18 +54,13 @@ export async function getWorkers(page = 1, limit = 10): Promise<PaginatedRespons
     },
   });
   
-  console.log('Status de la respuesta:', response.status);
-  console.log('Headers de la respuesta:', response.headers);
-  
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    console.error('Error completo de la API:', error);
     throw new Error(error.message || 'Error al obtener los trabajadores');
   }
   
   const responseData = await response.json();
-  console.log('Datos recibidos de la API:', responseData);
-  
+
   if (responseData && responseData.success === true && responseData.data) {
     return responseData.data as PaginatedResponse<Worker>;
   } else if (responseData && typeof responseData === 'object' && Array.isArray(responseData.data)) {
@@ -80,7 +73,6 @@ export async function getWorkers(page = 1, limit = 10): Promise<PaginatedRespons
       limit
     };
   } else {
-    console.log('Formato de respuesta inesperado:', responseData);
     return {
       data: [],
       total: 0,
@@ -244,15 +236,11 @@ export async function getAllUsersDebug(): Promise<{success: boolean; message: st
     throw new Error('No hay token de autenticación');
   }
   
-  console.log('Token de autenticación para debug:', token);
-  
   const response = await fetch(`${API_URL}/api/v1/users/debug/all`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
-  
-  console.log('Status de la respuesta debug:', response.status);
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
@@ -261,7 +249,6 @@ export async function getAllUsersDebug(): Promise<{success: boolean; message: st
   }
   
   const data = await response.json();
-  console.log('Datos de depuración recibidos:', data);
   
   return data;
 }

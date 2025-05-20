@@ -81,11 +81,6 @@ export default function WorkersPage() {
     setIsFormOpen(true);
   };
 
-  // Función para ver detalles del trabajador (se implementará en el futuro)
-  // const handleViewWorker = (worker: Worker) => {
-  //   console.log('Ver trabajador:', worker);
-  // };
-
   const handlePauseWorker = async (workerId: number) => {
     try {
       setError(null);

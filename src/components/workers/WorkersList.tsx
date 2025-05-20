@@ -18,10 +18,6 @@ export default function WorkersList() {
     setLoading(true);
     try {
       const response = await getWorkers(page, limit);
-      console.log('Datos de trabajadores recibidos (WorkersList):', response);
-      console.log('¿response.data es un array?', Array.isArray(response.data));
-      console.log('Longitud de response.data:', response.data ? response.data.length : 0);
-      
       setWorkers(response.data);
       setTotal(response.total);
       setError(null);
@@ -103,7 +99,6 @@ export default function WorkersList() {
       setLoading(true);
       setError(null);
       const response = await getAllUsersDebug();
-      console.log('Resultado del debug:', response);
       alert(`Resultado debug: ${JSON.stringify(response, null, 2)}`);
     } catch (err) {
       console.error('Error en test de debug:', err);

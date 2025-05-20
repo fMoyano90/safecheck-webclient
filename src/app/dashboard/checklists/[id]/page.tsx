@@ -178,7 +178,6 @@ export default function ChecklistDetailPage({ params }: ChecklistDetailPageProps
         createdAt: rawData.createdAt, // Map createdAt
         sections: apiSections.map(mapApiSectionToLocal),
       };
-      console.log('Datos del checklist mapeados:', JSON.stringify(mappedChecklist, null, 2));
       setChecklist(mappedChecklist);
     } catch (err) {
       console.error('Error al obtener el checklist:', err);
