@@ -43,7 +43,7 @@ export interface NumberQuestion extends BaseQuestion {
 }
 
 export interface ChoiceQuestion extends BaseQuestion {
-  options: TemplateOption[];
+  options?: TemplateOption[];
 }
 
 export interface DateTimeQuestion extends BaseQuestion {
@@ -206,7 +206,46 @@ export async function createTemplate(data: CreateTemplateData): Promise<Template
     throw new Error('No hay token de autenticación');
   }
 
+  // Verificar y procesar las opciones en las preguntas de selección
+  if (data.structure && data.structure.sections) {
+    // Crear una copia profunda para evitar modificar el objeto original
+    const processedData = JSON.parse(JSON.stringify(data));
+    
+    // Revisar cada sección y pregunta
+    processedData.structure.sections.forEach((section: TemplateSection) => {
+      if (section.questions && Array.isArray(section.questions)) {
+        section.questions.forEach((question: Question) => {
+          // Verificar si es una pregunta de selección con opciones
+          if (
+            (question.type === QuestionType.SINGLE_CHOICE || 
+             question.type === QuestionType.MULTIPLE_CHOICE)
+          ) {
+            // Asegurarse de que las opciones son válidas
+            // y no un array vacío antes de enviar al backend
+            if (!(question as ChoiceQuestion).options || (question as ChoiceQuestion).options?.length === 0) {
+              console.warn(
+                `Pregunta de selección múltiple/única sin opciones válidas. ID: ${question.id}. Se eliminará 'options'.`
+              );
+              delete (question as ChoiceQuestion).options; // Eliminar la propiedad options si está vacía o no existe
+            } else {
+              console.log(
+                `Pregunta ${question.id} (${question.type}) tiene ${(question as ChoiceQuestion).options?.length} opciones ANTES de enviar:`, 
+                JSON.stringify((question as ChoiceQuestion).options, null, 2)
+              );
+            }
+          }
+        });
+      }
+    });
+    
+    // Utilizar los datos procesados
+    data = processedData;
+  }
+
   console.log('Payload enviado a createTemplate:', JSON.stringify(data, null, 2));
+  
+  // Serializar manualmente a JSON y enviarlo como string para evitar problemas
+  const serializedData = JSON.stringify(data);
   
   const response = await fetch(`${API_URL}/api/v1/templates`, {
     method: 'POST',
@@ -214,7 +253,7 @@ export async function createTemplate(data: CreateTemplateData): Promise<Template
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(data),
+    body: serializedData,
   });
   
   if (!response.ok) {
@@ -226,6 +265,7 @@ export async function createTemplate(data: CreateTemplateData): Promise<Template
   
   // Manejar la estructura de respuesta del backend
   if (responseData && responseData.success && responseData.data !== undefined) {
+    console.log('Respuesta del backend:', JSON.stringify(responseData.data, null, 2));
     return responseData.data;
   } else {
     // Si la respuesta no tiene la estructura esperada, devolver la respuesta completa
@@ -243,13 +283,54 @@ export async function updateTemplate(id: number, data: UpdateTemplateData): Prom
     throw new Error('No hay token de autenticación');
   }
   
+  // Verificar y procesar las opciones en las preguntas de selección
+  if (data.structure && data.structure.sections) {
+    // Crear una copia profunda para evitar modificar el objeto original
+    const processedData = JSON.parse(JSON.stringify(data));
+    
+    // Revisar cada sección y pregunta
+    processedData.structure.sections.forEach((section: TemplateSection) => {
+      if (section.questions && Array.isArray(section.questions)) {
+        section.questions.forEach((question: Question) => {
+          // Verificar si es una pregunta de selección con opciones
+          if (
+            (question.type === QuestionType.SINGLE_CHOICE || 
+             question.type === QuestionType.MULTIPLE_CHOICE)
+          ) {
+            // Asegurarse de que las opciones son válidas
+            // y no un array vacío antes de enviar al backend
+            if (!(question as ChoiceQuestion).options || (question as ChoiceQuestion).options?.length === 0) {
+              console.warn(
+                `[UPDATE] Pregunta de selección múltiple/única sin opciones válidas. ID: ${question.id}. Se eliminará 'options'.`
+              );
+              delete (question as ChoiceQuestion).options; // Eliminar la propiedad options si está vacía o no existe
+            } else {
+              console.log(
+                `[UPDATE] Pregunta ${question.id} (${question.type}) tiene ${(question as ChoiceQuestion).options?.length} opciones ANTES de enviar:`, 
+                JSON.stringify((question as ChoiceQuestion).options, null, 2)
+              );
+            }
+          }
+        });
+      }
+    });
+    
+    // Utilizar los datos procesados
+    data = processedData;
+  }
+
+  console.log('[UPDATE] Payload a enviar:', JSON.stringify(data, null, 2));
+  
+  // Serializar manualmente a JSON y enviarlo como string para evitar problemas
+  const serializedData = JSON.stringify(data);
+  
   const response = await fetch(`${API_URL}/api/v1/templates/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(data),
+    body: serializedData,
   });
   
   if (!response.ok) {
@@ -261,6 +342,7 @@ export async function updateTemplate(id: number, data: UpdateTemplateData): Prom
   
   // Manejar la estructura de respuesta del backend
   if (responseData && responseData.success && responseData.data !== undefined) {
+    console.log('[UPDATE] Respuesta del backend:', JSON.stringify(responseData.data, null, 2));
     return responseData.data;
   } else {
     // Si la respuesta no tiene la estructura esperada, devolver la respuesta completa

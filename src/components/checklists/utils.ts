@@ -35,11 +35,13 @@ export const createNewQuestion = (type: QuestionType) => {
   switch (type) {
     case QuestionType.SINGLE_CHOICE:
     case QuestionType.MULTIPLE_CHOICE:
+      // Generar id únicos basados en timestamp para evitar colisiones
+      const timestamp = Date.now();
       return {
         ...newQuestion,
         options: [
-          { value: generateId(), label: 'Opción 1' },
-          { value: generateId(), label: 'Opción 2' },
+          { value: `option-1-${timestamp}`, label: 'Opción 1' },
+          { value: `option-2-${timestamp}`, label: 'Opción 2' },
         ],
       };
     case QuestionType.NUMBER:

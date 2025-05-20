@@ -6,13 +6,19 @@ import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { isAuthenticated, isAdmin } from '@/lib/auth';
 import { getTemplates, deleteTemplate, updateTemplateStatus, Template, TemplateType } from '@/lib/api/templates';
+import ConfirmModal from '@/components/common/ConfirmModal';
+import { ToastProvider, useToast } from '@/components/common/ToastContext';
 
-export default function ChecklistsPage() {
+function ChecklistsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [checklists, setChecklists] = useState<Template[]>([]);
   const [error, setError] = useState('');
   const [filterActive, setFilterActive] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [checklistToDelete, setChecklistToDelete] = useState<number | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const { showToast } = useToast();
 
   const fetchChecklists = useCallback(async () => {
     try {
@@ -53,20 +59,44 @@ export default function ChecklistsPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Está seguro que desea eliminar este checklist? Esta acción no se puede deshacer.')) {
-      try {
-        await deleteTemplate(id);
-        fetchChecklists();
-      } catch (err) {
-        console.error('Error al eliminar el checklist:', err);
-        setError('No se pudo eliminar el checklist. Por favor, intente nuevamente.');
-      }
+  const openDeleteModal = (id: number) => {
+    setChecklistToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!checklistToDelete) return;
+    
+    try {
+      setDeleteLoading(true);
+      await deleteTemplate(checklistToDelete);
+      fetchChecklists();
+      showToast('Checklist eliminado correctamente', 'success');
+    } catch (err) {
+      console.error('Error al eliminar el checklist:', err);
+      showToast('No se pudo eliminar el checklist', 'error');
+      setError('No se pudo eliminar el checklist. Por favor, intente nuevamente.');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteModalOpen(false);
+      setChecklistToDelete(null);
     }
   };
 
   return (
     <DashboardLayout>
+      {/* Modal de confirmación de eliminación */}
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Eliminar checklist"
+        message="¿Está seguro que desea eliminar este checklist? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        loading={deleteLoading}
+        type="danger"
+      />
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestión de Checklists</h1>
@@ -185,7 +215,7 @@ export default function ChecklistsPage() {
                         {checklist.isActive ? 'Desactivar' : 'Activar'}
                       </button>
                       <button
-                        onClick={() => handleDelete(checklist.id)}
+                        onClick={() => openDeleteModal(checklist.id)}
                         className="text-red-600 hover:text-red-900"
                       >
                         Eliminar
@@ -199,5 +229,13 @@ export default function ChecklistsPage() {
         </div>
       )}
     </DashboardLayout>
+  );
+}
+
+export default function ChecklistsPageWithToasts() {
+  return (
+    <ToastProvider>
+      <ChecklistsPage />
+    </ToastProvider>
   );
 }

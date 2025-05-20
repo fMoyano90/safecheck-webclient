@@ -17,7 +17,7 @@ import {
   getQuestionTypeLabel,
   createNewQuestion,
 } from "@/components/checklists/utils";
-import { Category, FormData, Section } from "@/types";
+import { Category, FormData, Section, Question } from "@/types";
 
 export default function CreateChecklistPage() {
   const router = useRouter();
@@ -55,6 +55,11 @@ export default function CreateChecklistPage() {
     // Cargar categorías
     fetchCategories();
   }, [router]);
+
+  // useEffect para observar cambios en el estado 'sections'
+  useEffect(() => {
+    console.log('EFFECT - El estado sections ha cambiado:', JSON.stringify(sections, null, 2));
+  }, [sections]);
 
   const fetchCategories = async () => {
     try {
@@ -159,15 +164,44 @@ export default function CreateChecklistPage() {
   };
 
   const addOption = (sectionIndex: number, questionIndex: number): void => {
-    const updatedSections = [...sections];
-    const question = updatedSections[sectionIndex].questions[questionIndex];
-    const options = question.options || [];
-    options.push({
-      value: generateId(),
-      label: `Opción ${options.length + 1}`,
+    const timestamp = Date.now();
+
+    setSections(prevSections => {
+      // Crea una nueva copia del array de secciones
+      const newSections = prevSections.map((section, sIdx) => {
+        // Si no es la sección que estamos actualizando, devuélvela tal cual
+        if (sIdx !== sectionIndex) {
+          return section;
+        }
+        // Es la sección correcta, ahora actualiza sus preguntas
+        return {
+          ...section,
+          questions: section.questions.map((question, qIdx) => {
+            // Si no es la pregunta que estamos actualizando, devuélvela tal cual
+            if (qIdx !== questionIndex) {
+              return question;
+            }
+            // Es la pregunta correcta, añade la nueva opción
+            const currentOptions = question.options || [];
+            const newOption = {
+              value: `option-${currentOptions.length + 1}-${timestamp}`,
+              label: `Opción ${currentOptions.length + 1}`,
+            };
+            const updatedOptions = [...currentOptions, newOption];
+            
+            // Log para ver las opciones que se están estableciendo para esta pregunta específica
+            console.log(`addOption - Opciones actualizadas para pregunta ${qIdx} en sección ${sIdx}:`, JSON.stringify(updatedOptions, null, 2));
+            
+            return {
+              ...question,
+              options: updatedOptions,
+            };
+          }),
+        };
+      });
+      // Devuelve el nuevo array de secciones para la actualización del estado
+      return newSections;
     });
-    question.options = options;
-    setSections(updatedSections);
   };
 
   const removeOption = (
@@ -192,6 +226,9 @@ export default function CreateChecklistPage() {
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    // Log CRÍTICO: ¿Qué ve handleSubmit en el estado 'sections'?
+    console.log('handleSubmit - INICIO - sections state:', JSON.stringify(sections, null, 2));
 
     // Validar que haya al menos una pregunta en cada sección
     const invalidSection = sections.find(
@@ -239,20 +276,38 @@ export default function CreateChecklistPage() {
     try {
       setSubmitting(true);
 
+      const sectionsCopy = JSON.parse(JSON.stringify(sections));
+      
+      console.log('handleSubmit - ANTES DE MAPEAR (sectionsCopy):', JSON.stringify(sectionsCopy, null, 2));
+      
+      // Verificar las opciones en preguntas de selección
+      sectionsCopy.forEach((section: Section, sIndex: number) => {
+        section.questions.forEach((question: Question, qIndex: number) => {
+          if (
+            (question.type === QuestionType.SINGLE_CHOICE || 
+             question.type === QuestionType.MULTIPLE_CHOICE) &&
+            question.options
+          ) {
+            console.log(
+              `handleSubmit - Sección ${sIndex}, Pregunta ${qIndex}, tipo ${question.type}, opciones:`, 
+              JSON.stringify(question.options, null, 2)
+            );
+          }
+        });
+      });
+
       // Crear una copia limpia de los datos para enviar al backend
-      // Convertir directamente a formato JSON para evitar problemas de tipo
       const rawData = {
         name: formData.name,
         description: formData.description,
         type: formData.type,
-        // Asegurarse de que categoryId sea un string (UUID)
         categoryId: String(formData.categoryId),
         structure: {
-          sections: sections.map(section => ({
+          sections: sectionsCopy.map((section: Section) => ({
             id: section.id,
             title: section.title,
             description: section.description || "",
-            questions: section.questions.map(question => {
+            questions: section.questions.map((question: Question) => {
               // Crear un objeto base con propiedades comunes
               const q: any = {
                 id: question.id,
@@ -277,8 +332,10 @@ export default function CreateChecklistPage() {
                 if (question.unit) q.unit = String(question.unit);
               } 
               else if (question.type === QuestionType.SINGLE_CHOICE || question.type === QuestionType.MULTIPLE_CHOICE) {
+                // Asegurar que se copian todas las opciones
                 if (question.options && Array.isArray(question.options)) {
-                  q.options = question.options.map(opt => ({
+                  console.log('handleSubmit - MAPEANDO OPCIONES:', JSON.stringify(question.options, null, 2));
+                  q.options = [...question.options].map(opt => ({
                     value: String(opt.value),
                     label: String(opt.label)
                   }));
@@ -302,7 +359,7 @@ export default function CreateChecklistPage() {
       const jsonString = JSON.stringify(rawData);
       const templateData = JSON.parse(jsonString);
 
-      console.log('Datos a enviar:', JSON.stringify(templateData, null, 2));
+      console.log('handleSubmit - Datos a enviar:', JSON.stringify(templateData, null, 2));
 
       // Obtener el token de autenticación usando la función correcta
       const token = getAuthToken();
