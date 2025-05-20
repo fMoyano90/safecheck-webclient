@@ -18,6 +18,7 @@ function ChecklistsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [checklistToDelete, setChecklistToDelete] = useState<number | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [togglingStatusId, setTogglingStatusId] = useState<number | null>(null);
   const { showToast } = useToast();
 
   const fetchChecklists = useCallback(async () => {
@@ -37,7 +38,7 @@ function ChecklistsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterActive]);  // Dependencias de fetchChecklists
+  }, [filterActive]);  
 
   useEffect(() => {
     // Verificar autenticación y permisos de administrador
@@ -50,12 +51,26 @@ function ChecklistsPage() {
   }, [router, fetchChecklists]);
 
   const handleToggleStatus = async (id: number, currentStatus: boolean) => {
+    setTogglingStatusId(id);
+    const originalChecklists = [...checklists];
+
+    // Actualización optimista de la UI
+    setChecklists(prevChecklists =>
+      prevChecklists.map(c =>
+        c.id === id ? { ...c, isActive: !currentStatus } : c
+      )
+    );
+
     try {
       await updateTemplateStatus(id, !currentStatus);
-      fetchChecklists();
+      showToast(`Checklist ${!currentStatus ? 'activado' : 'desactivado'} exitosamente`, 'success');
+      await fetchChecklists(); 
     } catch (err) {
       console.error('Error al cambiar el estado del checklist:', err);
-      setError('No se pudo cambiar el estado del checklist. Por favor, intente nuevamente.');
+      showToast('No se pudo cambiar el estado del checklist.', 'error');
+      setChecklists(originalChecklists); 
+    } finally {
+      setTogglingStatusId(null);
     }
   };
 
@@ -192,35 +207,50 @@ function ChecklistsPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      checklist.isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {checklist.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
+                    <button
+                      onClick={() => handleToggleStatus(checklist.id, checklist.isActive)}
+                      disabled={togglingStatusId === checklist.id}
+                      className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors w-28 text-center min-w-[100px] ${
+                        togglingStatusId === checklist.id
+                          ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                          : checklist.isActive
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200 focus:ring-2 focus:ring-green-500 focus:ring-opacity-50'
+                            : 'bg-red-100 text-red-800 hover:bg-red-200 focus:ring-2 focus:ring-red-500 focus:ring-opacity-50'
+                      }`}
+                    >
+                      {togglingStatusId === checklist.id ? (
+                        <div className="flex items-center justify-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Cargando...
+                        </div>
+                      ) : checklist.isActive ? 'Activo' : 'Inactivo'}
+                    </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <Link 
-                        href={`/dashboard/checklists/${checklist.id}`}
-                        className="text-primary hover:text-primary-dark"
-                      >
-                        Ver
-                      </Link>
-                      <button
-                        onClick={() => handleToggleStatus(checklist.id, checklist.isActive)}
-                        className="text-yellow-600 hover:text-yellow-900"
-                      >
-                        {checklist.isActive ? 'Desactivar' : 'Activar'}
-                      </button>
-                      <button
-                        onClick={() => openDeleteModal(checklist.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center space-x-3">
+                    <Link 
+                      href={`/dashboard/checklists/${checklist.id}`} 
+                      className="text-primary hover:text-indigo-700 transition-colors duration-150"
+                      aria-label="Ver checklist"
+                      title="Ver checklist"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </Link>
+                    <button
+                      onClick={() => openDeleteModal(checklist.id)}
+                      className="text-red-600 hover:text-red-800 transition-colors duration-150"
+                      aria-label="Eliminar checklist"
+                      title="Eliminar checklist"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12.56 0c1.153 0 2.242.078 3.223.226M5.34 5.79L4.26 19.673a2.25 2.25 0 002.244 2.077H17.5a2.25 2.25 0 002.244-2.077L18.66 5.79m-13.32 0c.636 0 1.257.078 1.848.227M5.34 5.79h13.32" />
+                      </svg>
+                    </button>
                   </td>
                 </tr>
               ))}

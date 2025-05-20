@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { isAuthenticated, isAdmin } from '@/lib/auth';
 import { getTemplateById, updateTemplate, updateTemplateStatus, deleteTemplate, getCategories as fetchCategoriesAPI, UpdateTemplateData } from '@/lib/api/templates';
+import { useToast } from '@/components/common/ToastContext';
 
 // Define API types locally based on expected structure
 interface ApiQuestionOptionType {
@@ -145,6 +146,7 @@ function mapApiSectionToLocal(apiSection: ApiSectionType): Section {
 export default function ChecklistDetailPage({ params }: ChecklistDetailPageProps) {
   const router = useRouter();
   const { id: checklistIdString } = params;
+  const { showToast } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -153,6 +155,7 @@ export default function ChecklistDetailPage({ params }: ChecklistDetailPageProps
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const fetchChecklistData = useCallback(async () => {
     try {
@@ -206,46 +209,67 @@ export default function ChecklistDetailPage({ params }: ChecklistDetailPageProps
 
   const handleToggleStatus = async () => {
     if (!checklist) {
-      setError('Checklist no cargado. No se puede cambiar el estado.');
+      showToast('Checklist no cargado. No se puede cambiar el estado.', 'error');
       return;
     }
+    const originalStatus = checklist.isActive;
     try {
       setSubmitting(true);
-      await updateTemplateStatus(checklist.id, !checklist.isActive);
+      // Optimistic update: change UI immediately
       setChecklist(prev => prev ? { ...prev, isActive: !prev.isActive } : null);
-      setSuccess(`Checklist ${checklist.isActive ? 'desactivado' : 'activado'} exitosamente`);
-      setError('');
-    } catch (err) {
+      await updateTemplateStatus(checklist.id, !originalStatus);
+      showToast(`Checklist ${!originalStatus ? 'activado' : 'desactivado'} exitosamente`, 'success');
+      setError(''); // Clear previous errors
+    } catch (err: unknown) {
+      // Revert optimistic update on error
+      setChecklist(prev => prev ? { ...prev, isActive: originalStatus } : null);
       console.error('Error al cambiar el estado del checklist:', err);
-      setError('No se pudo cambiar el estado del checklist. Por favor, intente nuevamente.');
-      setSuccess('');
+      
+      let errorMessage = 'No se pudo cambiar el estado del checklist. Por favor, intente nuevamente.';
+      if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message: string }).message === 'string') {
+        errorMessage = (err as { message: string }).message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      showToast(errorMessage, 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async () => {
+  const openDeleteModal = () => {
     if (!checklist) {
         setError('Checklist no cargado. No se puede eliminar.');
         return;
     }
-    if (window.confirm('¿Está seguro que desea eliminar este checklist? Esta acción no se puede deshacer.')) {
-      try {
-        setSubmitting(true);
-        await deleteTemplate(checklist.id);
-        setSuccess('Checklist eliminado exitosamente');
-        setError('');
-        
-        setTimeout(() => {
-          router.push('/dashboard/checklists');
-        }, 2000);
-      } catch (err) {
-        console.error('Error al eliminar el checklist:', err);
-        setError('No se pudo eliminar el checklist. Por favor, intente nuevamente.');
-        setSuccess('');
-        setSubmitting(false); 
-      }
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!checklist) return; // Should not happen if modal is shown correctly
+
+    try {
+      setSubmitting(true);
+      await deleteTemplate(checklist.id);
+      showToast('Checklist eliminado exitosamente', 'success');
+      setError('');
+      setShowDeleteModal(false);
+      
+      setTimeout(() => {
+        router.push('/dashboard/checklists');
+      }, 2000);
+    } catch (err) {
+      console.error('Error al eliminar el checklist:', err);
+      setError('No se pudo eliminar el checklist. Por favor, intente nuevamente.');
+      setSuccess('');
+      setShowDeleteModal(false); // Close modal on error too
+    } finally {
+      setSubmitting(false); // Ensure submitting is reset in all cases
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -290,7 +314,7 @@ export default function ChecklistDetailPage({ params }: ChecklistDetailPageProps
       
       await updateTemplate(checklist.id, updateData);
       
-      setSuccess('Checklist actualizado exitosamente');
+      showToast('Checklist actualizado exitosamente', 'success');
       setIsEditing(false);
     } catch (err) {
       console.error('Error al actualizar el checklist:', err);
@@ -556,19 +580,19 @@ export default function ChecklistDetailPage({ params }: ChecklistDetailPageProps
               </button>
               <button
                 onClick={handleToggleStatus}
+                disabled={submitting}
                 className={`px-3 py-1 ${
                   checklist.isActive 
                     ? 'bg-yellow-500 hover:bg-yellow-600' 
                     : 'bg-green-500 hover:bg-green-600'
                 } text-white rounded-md`}
-                disabled={submitting}
               >
                 {checklist.isActive ? 'Desactivar' : 'Activar'}
               </button>
               <button
-                onClick={handleDelete}
-                className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
+                onClick={openDeleteModal} 
                 disabled={submitting}
+                className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
               >
                 Eliminar
               </button>
@@ -662,13 +686,19 @@ export default function ChecklistDetailPage({ params }: ChecklistDetailPageProps
           <div>
             <label className="block text-sm font-medium text-gray-700">Estado</label>
             <div className="mt-1">
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                checklist.isActive 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {checklist.isActive ? 'Activo' : 'Inactivo'}
-              </span>
+              <button
+                onClick={handleToggleStatus}
+                disabled={submitting} // Usamos el estado 'submitting' general
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 ${ 
+                  checklist.isActive 
+                    ? 'bg-green-100 text-green-800 hover:bg-green-200 focus:ring-green-500' 
+                    : 'bg-red-100 text-red-800 hover:bg-red-200 focus:ring-red-500'
+                } ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {submitting 
+                  ? (checklist.isActive ? 'Activando...' : 'Desactivando...') // Texto mientras carga, basado en el estado *antes* del clic
+                  : (checklist.isActive ? 'Activo (Click para desactivar)' : 'Inactivo (Click para activar)')}
+              </button>
             </div>
           </div>
           <div>
@@ -726,6 +756,54 @@ export default function ChecklistDetailPage({ params }: ChecklistDetailPageProps
             >
               Ir a Editar Estructura Completa
           </button>
+        </div>
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && checklist && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex justify-center items-center z-50 transition-opacity duration-300 ease-in-out" style={{ backdropFilter: 'blur(4px)' }}>
+          <div className="relative p-6 bg-white shadow-xl rounded-lg w-full max-w-md mx-auto transform transition-all duration-300 ease-in-out scale-100">
+            <button 
+              onClick={cancelDelete}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Cerrar modal"
+            >
+              <svg className="w-6 h-6" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div className="flex flex-col items-center text-center">
+              <div className="bg-red-100 p-3 rounded-full mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Confirmar Eliminación</h3>
+              <p className="text-sm text-gray-600 mb-6">
+                ¿Está seguro que desea eliminar el checklist <strong className="font-medium">{checklist.name}</strong>? Esta acción no se puede deshacer.
+              </p>
+              <div className="flex justify-center space-x-3 w-full">
+                <button
+                  onClick={cancelDelete}
+                  disabled={submitting}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-150 ease-in-out"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={submitting}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-150 ease-in-out"
+                >
+                  {submitting ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Eliminando...
+                    </span>
+                  ) : 'Eliminar Permanentemente'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </DashboardLayout>
