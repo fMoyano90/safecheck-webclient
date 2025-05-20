@@ -1,120 +1,294 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent, FormEvent, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { isAuthenticated, isAdmin } from '@/lib/auth';
-import { getTemplateById, updateTemplate, updateTemplateStatus, deleteTemplate, getCategories } from '@/lib/api/templates';
+import { getTemplateById, updateTemplate, updateTemplateStatus, deleteTemplate, getCategories as fetchCategoriesAPI, UpdateTemplateData } from '@/lib/api/templates';
 
-export default function ChecklistDetailPage({ params }) {
+// Define API types locally based on expected structure
+interface ApiQuestionOptionType {
+  id?: number | string;
+  label: string; // Expect 'label' from API for display text
+  value: number | string; // API might send number or string for value
+  // Add other properties if the API sends them
+}
+
+interface ApiQuestionType {
+  id: number | string;
+  text: string;
+  type: string; // Keep as string initially from API, will be cast to QuestionType
+  required: boolean;
+  options?: ApiQuestionOptionType[];
+  min?: number;
+  max?: number;
+  maxPhotos?: number;
+  // Add other API specific question properties
+}
+
+interface ApiSectionType {
+  id: number | string;
+  title: string;
+  description?: string;
+  questions?: ApiQuestionType[];
+}
+
+interface ApiTemplateType {
+  id: number;
+  name: string;
+  description?: string | null;
+  categoryId: number | string; // API might send number or string
+  isActive: boolean;
+  createdAt?: string; // Added createdAt from API
+  sections?: ApiSectionType[];
+  structure?: {
+    sections?: ApiSectionType[];
+  };
+  // any other fields from the API template
+}
+
+interface ApiCategoryType {
+  id: number | string; // API might send number or string
+  name: string;
+  // any other fields from the API category
+}
+
+// Local component interfaces
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface QuestionOption {
+  id?: string;
+  text: string;
+  value: string;
+}
+
+type QuestionType = 
+  | 'text_input'
+  | 'text_area'
+  | 'number'
+  | 'boolean'
+  | 'single_choice'
+  | 'multiple_choice'
+  | 'date'
+  | 'time'
+  | 'photo'
+  | 'signature';
+
+interface Question {
+  id: string;
+  text: string;
+  type: QuestionType;
+  required: boolean;
+  options?: QuestionOption[];
+  min?: number;
+  max?: number;
+  maxPhotos?: number;
+}
+
+interface Section {
+  id: string;
+  title: string;
+  description?: string;
+  questions: Question[];
+}
+
+interface Checklist {
+  id: number;
+  name: string;
+  description: string;
+  categoryId: string;
+  isActive: boolean;
+  createdAt?: string; // Added createdAt for local use
+  sections: Section[];
+}
+
+interface ChecklistDetailPageProps {
+  params: {
+    id: string;
+  };
+}
+
+// Mapping functions
+function mapApiQuestionOptionToLocal(apiOption: ApiQuestionOptionType): QuestionOption {
+  return {
+    id: apiOption.id ? String(apiOption.id) : undefined,
+    text: apiOption.label, // Map 'label' from API to 'text' for local use
+    value: String(apiOption.value), // Ensure value is string for local use
+  };
+}
+
+function mapApiQuestionToLocal(apiQuestion: ApiQuestionType): Question {
+  return {
+    id: String(apiQuestion.id),
+    text: apiQuestion.text,
+    type: apiQuestion.type as QuestionType, // Assuming API type string matches local QuestionType values
+    required: apiQuestion.required,
+    options: (apiQuestion.options || []).map(mapApiQuestionOptionToLocal),
+    min: apiQuestion.min,
+    max: apiQuestion.max,
+    maxPhotos: apiQuestion.maxPhotos,
+  };
+}
+
+function mapApiSectionToLocal(apiSection: ApiSectionType): Section {
+  return {
+    id: String(apiSection.id),
+    title: apiSection.title,
+    description: apiSection.description,
+    questions: (apiSection.questions || []).map(mapApiQuestionToLocal),
+  };
+}
+
+export default function ChecklistDetailPage({ params }: ChecklistDetailPageProps) {
   const router = useRouter();
-  const { id } = params;
+  const { id: checklistIdString } = params;
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [checklist, setChecklist] = useState(null);
-  const [categories, setCategories] = useState([]);
+  const [checklist, setChecklist] = useState<Checklist | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
-    // Verificar autenticación y permisos de administrador
-    if (!isAuthenticated() || !isAdmin()) {
-      router.push('/');
-      return;
-    }
-
-    fetchChecklist();
-    fetchCategories();
-  }, [router, id]);
-
-  const fetchChecklist = async () => {
+  const fetchChecklistData = useCallback(async () => {
     try {
-      const data = await getTemplateById(parseInt(id));
-      console.log('Datos del checklist:', JSON.stringify(data, null, 2));
-      setChecklist(data);
+      setLoading(true);
+      const rawData = await getTemplateById(parseInt(checklistIdString, 10)) as ApiTemplateType;
+      
+      let apiSections: ApiSectionType[] = [];
+      if (rawData.structure && rawData.structure.sections) {
+        apiSections = rawData.structure.sections;
+      } else if (rawData.sections) {
+        apiSections = rawData.sections;
+      }
+
+      const mappedChecklist: Checklist = {
+        id: rawData.id,
+        name: rawData.name,
+        description: rawData.description || '',
+        categoryId: String(rawData.categoryId), 
+        isActive: rawData.isActive,
+        createdAt: rawData.createdAt, // Map createdAt
+        sections: apiSections.map(mapApiSectionToLocal),
+      };
+      console.log('Datos del checklist mapeados:', JSON.stringify(mappedChecklist, null, 2));
+      setChecklist(mappedChecklist);
     } catch (err) {
       console.error('Error al obtener el checklist:', err);
       setError('No se pudo cargar el checklist. Por favor, intente nuevamente.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [checklistIdString]);
 
-  const fetchCategories = async () => {
+  const loadCategories = useCallback(async () => {
     try {
-      const categoriesData = await getCategories();
-      setCategories(categoriesData);
+      const categoriesData = await fetchCategoriesAPI() as ApiCategoryType[]; 
+      setCategories(categoriesData.map(c => ({ id: String(c.id), name: c.name })));
     } catch (err) {
       console.error('Error al cargar categorías:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated() || !isAdmin()) {
+      router.push('/');
+      return;
+    }
+
+    fetchChecklistData();
+    loadCategories();
+  }, [router, fetchChecklistData, loadCategories]);
 
   const handleToggleStatus = async () => {
+    if (!checklist) {
+      setError('Checklist no cargado. No se puede cambiar el estado.');
+      return;
+    }
     try {
       setSubmitting(true);
-      await updateTemplateStatus(parseInt(id), !checklist.isActive);
-      setChecklist(prev => ({ ...prev, isActive: !prev.isActive }));
+      await updateTemplateStatus(checklist.id, !checklist.isActive);
+      setChecklist(prev => prev ? { ...prev, isActive: !prev.isActive } : null);
       setSuccess(`Checklist ${checklist.isActive ? 'desactivado' : 'activado'} exitosamente`);
+      setError('');
     } catch (err) {
       console.error('Error al cambiar el estado del checklist:', err);
       setError('No se pudo cambiar el estado del checklist. Por favor, intente nuevamente.');
+      setSuccess('');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
+    if (!checklist) {
+        setError('Checklist no cargado. No se puede eliminar.');
+        return;
+    }
     if (window.confirm('¿Está seguro que desea eliminar este checklist? Esta acción no se puede deshacer.')) {
       try {
         setSubmitting(true);
-        await deleteTemplate(parseInt(id));
+        await deleteTemplate(checklist.id);
         setSuccess('Checklist eliminado exitosamente');
+        setError('');
         
-        // Redireccionar después de 2 segundos
         setTimeout(() => {
           router.push('/dashboard/checklists');
         }, 2000);
       } catch (err) {
         console.error('Error al eliminar el checklist:', err);
         setError('No se pudo eliminar el checklist. Por favor, intente nuevamente.');
-        setSubmitting(false);
+        setSuccess('');
+        setSubmitting(false); 
       }
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setChecklist(prev => ({ ...prev, [name]: value }));
+    setChecklist(prev => prev ? { ...prev, [name]: value } : null);
   };
 
-  const handleCategoryChange = (e) => {
+  const handleCategoryChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    setChecklist(prev => ({ ...prev, categoryId: value }));
+    setChecklist(prev => prev ? { ...prev, categoryId: value } : null);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (event?: FormEvent) => {
+    if (event) event.preventDefault();
+
+    if (!checklist) {
+      setError('Checklist no cargado. No se puede guardar.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError('');
+      setSuccess('');
       
-      // Validar campos requeridos
       if (!checklist.name.trim()) {
         setError('El nombre del checklist es requerido');
         setSubmitting(false);
         return;
       }
+      if (!checklist.categoryId) {
+        setError('La categoría es requerida.');
+        setSubmitting(false);
+        return;
+      }
       
-      // Preparar datos para enviar
-      const updateData = {
+      const updateData: UpdateTemplateData = {
         name: checklist.name,
         description: checklist.description,
         categoryId: checklist.categoryId,
       };
       
-      // Enviar datos a la API
-      await updateTemplate(parseInt(id), updateData);
+      await updateTemplate(checklist.id, updateData);
       
       setSuccess('Checklist actualizado exitosamente');
       setIsEditing(false);
@@ -126,8 +300,7 @@ export default function ChecklistDetailPage({ params }) {
     }
   };
 
-  // Función para renderizar una sección del checklist
-  const renderSection = (section, sectionIndex) => {
+  const renderSection = (section: Section) => {
     return (
       <div key={section.id} className="mb-6 bg-white p-6 rounded-lg shadow">
         <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -138,11 +311,11 @@ export default function ChecklistDetailPage({ params }) {
         )}
         
         <div className="space-y-4">
-          {section.questions.map((question, questionIndex) => (
+          {section.questions.map((question) => (
             <div key={question.id} className="border border-gray-200 rounded-md p-4">
               <div className="mb-2">
                 <span className="text-sm font-medium text-gray-700">
-                  {questionIndex + 1}. {question.text}
+                  {question.text}
                 </span>
                 {question.required && (
                   <span className="ml-2 text-xs text-red-500">*</span>
@@ -161,9 +334,8 @@ export default function ChecklistDetailPage({ params }) {
     );
   };
 
-  // Función para obtener etiqueta legible del tipo de pregunta
-  const getQuestionTypeLabel = (type) => {
-    const labels = {
+  const getQuestionTypeLabel = (type: QuestionType): string => {
+    const labels: Record<QuestionType, string> = {
       'text_input': 'Texto Corto',
       'text_area': 'Texto Largo',
       'number': 'Número',
@@ -175,11 +347,10 @@ export default function ChecklistDetailPage({ params }) {
       'photo': 'Foto',
       'signature': 'Firma',
     };
-    return labels[type] || type;
+    return labels[type];
   };
 
-  // Función para renderizar una vista previa de la pregunta según su tipo
-  const renderQuestionPreview = (question) => {
+  const renderQuestionPreview = (question: Question) => {
     switch (question.type) {
       case 'text_input':
         return (
@@ -247,15 +418,15 @@ export default function ChecklistDetailPage({ params }) {
       case 'single_choice':
         return (
           <div className="mt-2 space-y-2">
-            {question.options && question.options.length > 0 ? (
-              question.options.map((option) => (
+            {(question.options && question.options.length > 0) ? (
+              question.options.map((option: QuestionOption) => (
                 <label key={option.value || Math.random()} className="flex items-center">
                   <input
                     type="radio"
                     disabled
                     className="rounded-full border-gray-300 text-primary focus:ring-primary"
                   />
-                  <span className="ml-2 text-sm text-gray-700">{option.label}</span>
+                  <span className="ml-2 text-sm text-gray-700">{option.text}</span>
                 </label>
               ))
             ) : (
@@ -267,15 +438,15 @@ export default function ChecklistDetailPage({ params }) {
       case 'multiple_choice':
         return (
           <div className="mt-2 space-y-2">
-            {question.options && question.options.length > 0 ? (
-              question.options.map((option) => (
+            {(question.options && question.options.length > 0) ? (
+              question.options.map((option: QuestionOption) => (
                 <label key={option.value || Math.random()} className="flex items-center">
                   <input
                     type="checkbox"
                     disabled
                     className="rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                  <span className="ml-2 text-sm text-gray-700">{option.label}</span>
+                  <span className="ml-2 text-sm text-gray-700">{option.text}</span>
                 </label>
               ))
             ) : (
@@ -310,7 +481,7 @@ export default function ChecklistDetailPage({ params }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             <p className="mt-1 text-sm text-gray-500">Tomar foto</p>
-            {question.maxPhotos > 1 && (
+            {question.maxPhotos && question.maxPhotos > 1 && (
               <p className="text-xs text-gray-500">Máximo: {question.maxPhotos} fotos</p>
             )}
           </div>
@@ -327,7 +498,10 @@ export default function ChecklistDetailPage({ params }) {
         );
         
       default:
-        return null;
+        // Exhaustive check for question types
+        const exhaustiveCheck: never = question.type;
+        console.warn(`Tipo de pregunta no reconocido: ${exhaustiveCheck}`);
+        return <p className="text-xs text-red-500">Tipo de pregunta no soportado: {question.type}</p>;
     }
   };
 
@@ -488,7 +662,7 @@ export default function ChecklistDetailPage({ params }) {
           <div>
             <label className="block text-sm font-medium text-gray-700">Estado</label>
             <div className="mt-1">
-              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                 checklist.isActive 
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-red-100 text-red-800'
@@ -500,7 +674,7 @@ export default function ChecklistDetailPage({ params }) {
           <div>
             <label className="block text-sm font-medium text-gray-700">Fecha de creación</label>
             <div className="mt-1 text-gray-900">
-              {new Date(checklist.createdAt).toLocaleDateString('es-ES', {
+              {checklist.createdAt && new Date(checklist.createdAt).toLocaleDateString('es-ES', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
@@ -516,15 +690,15 @@ export default function ChecklistDetailPage({ params }) {
       <div className="mb-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Estructura del Checklist</h2>
         
-        {checklist.structure?.sections?.length > 0 ? (
+        {checklist.sections?.length > 0 ? (
           <div className="space-y-4">
-            {checklist.structure.sections.map((section, index) => renderSection(section, index))}
+            {checklist.sections.map((section) => renderSection(section))}
           </div>
         ) : (
           <div className="bg-white p-6 rounded-lg shadow text-center">
             <p className="text-gray-500">Este checklist no tiene secciones definidas.</p>
             <button
-              onClick={() => router.push(`/dashboard/checklists/create?clone=${id}`)}
+              onClick={() => router.push(`/dashboard/checklists/create?clone=${checklistIdString}`)}
               className="mt-2 text-primary hover:underline"
             >
               Crear una nueva versión con secciones
@@ -542,6 +716,18 @@ export default function ChecklistDetailPage({ params }) {
           Volver a la lista
         </button>
       </div>
+      {isEditing && (
+        <div className="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 text-blue-700">
+          <p className="font-medium">Nota:</p>
+          <p>La edición de secciones y preguntas se realiza en la página de <strong className='font-bold'>&quot;Crear/Editar Checklist&quot;</strong>. Aquí solo puedes modificar la información básica (nombre, descripción, categoría).</p>
+           <button 
+              onClick={() => router.push(`/dashboard/checklists/edit/${checklistIdString}`)} 
+              className="mt-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-150"
+            >
+              Ir a Editar Estructura Completa
+          </button>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
