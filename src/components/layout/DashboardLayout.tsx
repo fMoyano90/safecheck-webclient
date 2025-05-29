@@ -38,6 +38,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     if (pathname?.includes('/dashboard/forms') || pathname?.includes('/dashboard/categories')) {
       setExpandedMenus(prev => prev.includes('forms') ? prev : [...prev, 'forms']);
     }
+    if (pathname?.includes('/dashboard/activities')) {
+      setExpandedMenus(prev => prev.includes('activities') ? prev : [...prev, 'activities']);
+    }
+    if (pathname?.includes('/dashboard/admins') || pathname?.includes('/dashboard/workers') || pathname?.includes('/dashboard/supervisors')) {
+      setExpandedMenus(prev => prev.includes('users') ? prev : [...prev, 'users']);
+    }
   }, [pathname]);
 
   const handleLogout = () => {
@@ -211,12 +217,20 @@ function SidebarItems({ collapsed, expandedMenus, toggleMenu, currentPath }: Sid
         collapsed={collapsed}
         isActive={currentPath === '/dashboard'}
       />
-      <SidebarItem 
-        href="/dashboard/admins" 
-        icon="users" 
-        label="Administradores" 
+      
+      {/* Gestión de Usuarios con submenu */}
+      <SidebarMenuGroup
+        icon="users"
+        label="Gestión de Usuarios"
         collapsed={collapsed}
-        isActive={currentPath === '/dashboard/admins'}
+        expanded={expandedMenus.includes('users')}
+        onToggle={() => toggleMenu('users')}
+        currentPath={currentPath}
+        items={[
+          { href: "/dashboard/admins", label: "Administradores" },
+          { href: "/dashboard/workers", label: "Trabajadores" },
+          { href: "/dashboard/supervisors", label: "Supervisores" }
+        ]}
       />
       
       {/* Formularios con submenu */}
@@ -233,20 +247,21 @@ function SidebarItems({ collapsed, expandedMenus, toggleMenu, currentPath }: Sid
         ]}
       />
       
-      <SidebarItem 
-        href="/dashboard/workers" 
-        icon="users" 
-        label="Trabajadores" 
+      {/* Actividades con submenu */}
+      <SidebarMenuGroup
+        icon="calendar"
+        label="Actividades"
         collapsed={collapsed}
-        isActive={currentPath === '/dashboard/workers'}
+        expanded={expandedMenus.includes('activities')}
+        onToggle={() => toggleMenu('activities')}
+        currentPath={currentPath}
+        items={[
+          { href: "/dashboard/activities", label: "Gestionar Actividades" },
+          { href: "/dashboard/activities/pending", label: "Pendientes de Revisión" },
+          { href: "/dashboard/activities/history", label: "Historial de Actividades" }
+        ]}
       />
-      <SidebarItem 
-        href="/dashboard/supervisors" 
-        icon="user-check" 
-        label="Supervisores" 
-        collapsed={collapsed}
-        isActive={currentPath === '/dashboard/supervisors'}
-      />
+      
       <SidebarItem 
         href="/dashboard/reports" 
         icon="chart" 
@@ -275,6 +290,12 @@ function SidebarMenuGroup({ icon, label, collapsed, expanded, onToggle, currentP
         return (
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+          </svg>
+        );
+      case 'calendar':
+        return (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         );
       default:
