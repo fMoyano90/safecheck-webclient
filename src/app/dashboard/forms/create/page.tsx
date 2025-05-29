@@ -10,20 +10,21 @@ import {
   TemplateType,
 } from "@/lib/api/templates";
 import { getCategories } from "@/lib/api/categories";
-import BasicInfo from "@/components/checklists/BasicInfo";
-import SectionItem from "@/components/checklists/SectionItem";
+import BasicInfo from "@/components/forms/BasicInfo";
+import SectionItem from "@/components/forms/SectionItem";
 import {
   generateId,
   getQuestionTypeLabel,
   createNewQuestion,
-} from "@/components/checklists/utils";
-import { Category, FormData, Section, Question } from "@/types";
+} from "@/components/forms/utils";
+import { Category, FormData, Section, Question, FORM_TYPES_CONFIG } from "@/types";
 
-export default function CreateChecklistPage() {
+export default function CreateFormPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -31,7 +32,7 @@ export default function CreateChecklistPage() {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     description: "",
-    categoryId: "",
+    subcategoryId: "", // Cambiado de categoryId a subcategoryId
     type: TemplateType.CHECKLIST,
   });
 
@@ -61,17 +62,35 @@ export default function CreateChecklistPage() {
     console.log('EFFECT - El estado sections ha cambiado:', JSON.stringify(sections, null, 2));
   }, [sections]);
 
+  // Filtrar subcategorías cuando cambie el tipo de formulario
+  useEffect(() => {
+    const filtered = categories.filter(cat => cat.form_type === formData.type);
+    setFilteredCategories(filtered);
+    
+    // Si hay subcategorías filtradas, seleccionar la primera por defecto
+    if (filtered.length > 0) {
+      setFormData(prev => ({ ...prev, subcategoryId: filtered[0].id }));
+    } else {
+      setFormData(prev => ({ ...prev, subcategoryId: "" }));
+    }
+  }, [formData.type, categories]);
+
   const fetchCategories = async () => {
     try {
       const categoriesData = await getCategories();
       setCategories(categoriesData);
-      if (categoriesData.length > 0) {
-        setFormData((prev) => ({ ...prev, categoryId: categoriesData[0].id }));
+      
+      // Filtrar por el tipo por defecto (CHECKLIST)
+      const defaultFiltered = categoriesData.filter(cat => cat.form_type === TemplateType.CHECKLIST);
+      setFilteredCategories(defaultFiltered);
+      
+      if (defaultFiltered.length > 0) {
+        setFormData((prev) => ({ ...prev, subcategoryId: defaultFiltered[0].id }));
       }
     } catch (err) {
-      console.error("Error al cargar categorías:", err);
+      console.error("Error al cargar subcategorías:", err);
       setError(
-        "No se pudieron cargar las categorías. Por favor, intente nuevamente."
+        "No se pudieron cargar las subcategorías. Por favor, intente nuevamente."
       );
     } finally {
       setLoading(false);
@@ -79,9 +98,14 @@ export default function CreateChecklistPage() {
   };
   
   const handleCategoryCreated = (newCategory: Category) => {
-    // Añadir la nueva categoría a la lista y seleccionarla
+    // Añadir la nueva subcategoría a la lista
     setCategories(prev => [...prev, newCategory]);
-    setFormData(prev => ({ ...prev, categoryId: newCategory.id }));
+    
+    // Si la nueva subcategoría es del tipo seleccionado, también agregarla a las filtradas y seleccionarla
+    if (newCategory.form_type === formData.type) {
+      setFilteredCategories(prev => [...prev, newCategory]);
+      setFormData(prev => ({ ...prev, subcategoryId: newCategory.id }));
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -113,7 +137,7 @@ export default function CreateChecklistPage() {
 
   const removeSection = (sectionIndex: number): void => {
     if (sections.length === 1) {
-      setError("Debe haber al menos una sección en el checklist.");
+      setError("Debe haber al menos una sección en el formulario.");
       return;
     }
 
@@ -219,6 +243,11 @@ export default function CreateChecklistPage() {
     setSections(updatedSections);
   };
 
+  const getFormTypeLabel = (type: TemplateType) => {
+    const config = FORM_TYPES_CONFIG.find(c => c.type === type);
+    return config?.label || type;
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
@@ -273,7 +302,7 @@ export default function CreateChecklistPage() {
         name: formData.name,
         description: formData.description,
         type: formData.type,
-        categoryId: String(formData.categoryId),
+        subcategoryId: String(formData.subcategoryId), // Cambiado de categoryId a subcategoryId
         structure: {
           sections: sectionsCopy.map((section: Section) => ({
             id: section.id,
@@ -347,20 +376,20 @@ export default function CreateChecklistPage() {
         if (!response.ok) {
           const errorData = await response.json();
           console.error('Error del servidor:', errorData);
-          throw new Error(errorData.message || 'Error al crear el checklist');
+          throw new Error(errorData.message || `Error al crear el ${getFormTypeLabel(formData.type).toLowerCase()}`);
         }
         return response.json();
       });
 
-      setSuccess("Checklist creado exitosamente");
+      setSuccess(`${getFormTypeLabel(formData.type)} creado exitosamente`);
 
       // Redireccionar después de 2 segundos
       setTimeout(() => {
-        router.push("/dashboard/checklists");
+        router.push("/dashboard/forms");
       }, 2000);
     } catch (err) {
-      console.error("Error al crear el checklist:", err);
-      setError("No se pudo crear el checklist. Por favor, intente nuevamente.");
+      console.error(`Error al crear el ${getFormTypeLabel(formData.type).toLowerCase()}:`, err);
+      setError(`No se pudo crear el ${getFormTypeLabel(formData.type).toLowerCase()}. Por favor, intente nuevamente.`);
     } finally {
       setSubmitting(false);
     }
@@ -370,10 +399,10 @@ export default function CreateChecklistPage() {
     <DashboardLayout>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
-          Crear Nuevo Checklist
+          Crear Nuevo Formulario de {getFormTypeLabel(formData.type)}
         </h1>
         <p className="mt-1 text-sm text-gray-600">
-          Cree un nuevo checklist con diferentes tipos de preguntas
+          Cree un nuevo formulario de {getFormTypeLabel(formData.type).toLowerCase()} con diferentes tipos de preguntas
         </p>
       </div>
 
@@ -395,12 +424,13 @@ export default function CreateChecklistPage() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Información básica del checklist */}
+          {/* Información básica del formulario */}
           <BasicInfo
             formData={formData}
-            categories={categories}
+            categories={filteredCategories}
             onInputChange={handleInputChange}
             onCategoryCreated={handleCategoryCreated}
+            getFormTypeLabel={getFormTypeLabel}
           />
 
           {/* Secciones y preguntas */}
@@ -436,7 +466,7 @@ export default function CreateChecklistPage() {
           <div className="flex justify-end space-x-3">
             <button
               type="button"
-              onClick={() => router.push("/dashboard/checklists")}
+              onClick={() => router.push("/dashboard/forms")}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Cancelar
@@ -446,7 +476,7 @@ export default function CreateChecklistPage() {
               disabled={submitting}
               className="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 disabled:opacity-50"
             >
-              {submitting ? "Guardando..." : "Guardar Checklist"}
+              {submitting ? "Guardando..." : `Guardar ${getFormTypeLabel(formData.type)}`}
             </button>
           </div>
         </form>

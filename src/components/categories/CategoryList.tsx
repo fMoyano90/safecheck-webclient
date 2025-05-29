@@ -2,15 +2,24 @@
 
 import React, { useState } from 'react';
 import { Category } from '@/types';
+import { TemplateType } from '@/lib/api/templates';
 import { updateCategoryStatus, deleteCategory } from '@/lib/api/categories';
 
 interface CategoryListProps {
   categories: Category[];
   onEditCategory: (category: Category) => void;
   onRefresh: () => void;
+  showFormType?: boolean;
+  getFormTypeLabel?: (type: TemplateType) => string;
 }
 
-const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory, onRefresh }) => {
+const CategoryList: React.FC<CategoryListProps> = ({ 
+  categories, 
+  onEditCategory, 
+  onRefresh, 
+  showFormType = false,
+  getFormTypeLabel 
+}) => {
   const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState('');
 
@@ -24,18 +33,18 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory,
       // Refrescar la lista de categorías
       onRefresh();
     } catch (err) {
-      console.error('Error al cambiar estado de categoría:', err);
+      console.error('Error al cambiar estado de subcategoría:', err);
       
       // Mejorar el mensaje de error para ser más descriptivo
       let errorMessage = '';
       if (err instanceof Error) {
         errorMessage = err.message;
       } else {
-        errorMessage = 'Error al cambiar estado de categoría';
+        errorMessage = 'Error al cambiar estado de subcategoría';
       }
       
       // Mostrar mensaje de error más amigable
-      setError(`${errorMessage}. Verifique que la categoría exista y tenga permisos para modificarla.`);
+      setError(`${errorMessage}. Verifique que la subcategoría exista y tenga permisos para modificarla.`);
       setTimeout(() => setError(''), 5000); // Aumentar tiempo para leer el mensaje
     } finally {
       setLoading(prev => ({ ...prev, [category.id]: false }));
@@ -43,7 +52,7 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory,
   };
 
   const handleDeleteCategory = async (categoryId: number) => {
-    if (!window.confirm('¿Está seguro que desea eliminar esta categoría? Esta acción no se puede deshacer.')) {
+    if (!window.confirm('¿Está seguro que desea eliminar esta subcategoría? Esta acción no se puede deshacer.')) {
       return;
     }
     
@@ -52,8 +61,8 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory,
       await deleteCategory(categoryId);
       onRefresh();
     } catch (err) {
-      console.error('Error al eliminar categoría:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Error al eliminar categoría';
+      console.error('Error al eliminar subcategoría:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error al eliminar subcategoría';
       setError(errorMessage);
       setTimeout(() => setError(''), 3000);
     } finally {
@@ -81,6 +90,11 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory,
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Descripción
             </th>
+            {showFormType && (
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tipo de Formulario
+              </th>
+            )}
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Estado
             </th>
@@ -92,8 +106,8 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory,
         <tbody className="bg-white divide-y divide-gray-200">
           {categories.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
-                No hay categorías disponibles
+              <td colSpan={showFormType ? 6 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
+                No hay subcategorías disponibles
               </td>
             </tr>
           ) : (
@@ -111,6 +125,13 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories, onEditCategory,
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-500 line-clamp-2">{category.description || '-'}</div>
                 </td>
+                {showFormType && (
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {getFormTypeLabel ? getFormTypeLabel(category.form_type) : category.form_type}
+                    </span>
+                  </td>
+                )}
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                     category.is_active === false 

@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createCategory, updateCategory } from '@/lib/api/categories';
-import { Category } from '@/types';
+import { Category, FORM_TYPES_CONFIG } from '@/types';
+import { TemplateType } from '@/lib/api/templates';
 
 interface CategoryModalProps {
   isOpen: boolean;
@@ -15,30 +16,33 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    color: '#0a7ea4' // Color primario por defecto
+    color: '#0a7ea4', // Color primario por defecto
+    form_type: TemplateType.CHECKLIST // Tipo por defecto
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Cargar datos de la categoría a editar cuando cambia
+  // Cargar datos de la subcategoría a editar cuando cambia
   useEffect(() => {
     if (editingCategory) {
       setFormData({
         name: editingCategory.name,
         description: editingCategory.description || '',
-        color: editingCategory.color || '#0a7ea4'
+        color: editingCategory.color || '#0a7ea4',
+        form_type: editingCategory.form_type || TemplateType.CHECKLIST
       });
     } else {
-      // Restablecer el formulario si no hay categoría para editar
+      // Restablecer el formulario si no hay subcategoría para editar
       setFormData({
         name: '',
         description: '',
-        color: '#0a7ea4'
+        color: '#0a7ea4',
+        form_type: TemplateType.CHECKLIST
       });
     }
   }, [editingCategory, isOpen]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -49,7 +53,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
 
     // Validación básica
     if (!formData.name.trim()) {
-      setError('El nombre de la categoría es obligatorio');
+      setError('El nombre de la subcategoría es obligatorio');
       return;
     }
 
@@ -59,46 +63,49 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
       let resultCategory;
       
       if (editingCategory) {
-        // Actualizar categoría existente
+        // Actualizar subcategoría existente
         resultCategory = await updateCategory(Number(editingCategory.id), {
           name: formData.name,
           description: formData.description,
           color: formData.color,
+          form_type: formData.form_type,
           // Mantener el estado actual si estamos editando
           isActive: editingCategory.is_active
         });
       } else {
-        // Crear nueva categoría
+        // Crear nueva subcategoría
         resultCategory = await createCategory({
           name: formData.name,
           description: formData.description,
-          color: formData.color
+          color: formData.color,
+          form_type: formData.form_type
         });
       }
       
-      // Notificar al componente padre sobre la categoría creada/actualizada
+      // Notificar al componente padre sobre la subcategoría creada/actualizada
       onCategoryCreated(resultCategory);
       
       // Limpiar el formulario y cerrar el modal
       setFormData({
         name: '',
         description: '',
-        color: '#0a7ea4'
+        color: '#0a7ea4',
+        form_type: TemplateType.CHECKLIST
       });
       onClose();
     } catch (err) {
-      console.error(`Error al ${editingCategory ? 'actualizar' : 'crear'} la categoría:`, err);
+      console.error(`Error al ${editingCategory ? 'actualizar' : 'crear'} la subcategoría:`, err);
       
       // Mejorar el mensaje de error para ser más descriptivo
       let errorMessage = '';
       if (err instanceof Error) {
         errorMessage = err.message;
       } else {
-        errorMessage = `Error al ${editingCategory ? 'actualizar' : 'crear'} la categoría. Por favor, intente nuevamente.`;
+        errorMessage = `Error al ${editingCategory ? 'actualizar' : 'crear'} la subcategoría. Por favor, intente nuevamente.`;
       }
       
       // Mostrar mensaje de error más amigable
-      setError(`${errorMessage} ${editingCategory ? 'Verifique que la categoría exista y tenga permisos para editarla.' : ''}`);
+      setError(`${errorMessage} ${editingCategory ? 'Verifique que la subcategoría exista y tenga permisos para editarla.' : ''}`);
     } finally {
       setLoading(false);
     }
@@ -112,7 +119,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
+              {editingCategory ? 'Editar Subcategoría' : 'Nueva Subcategoría'}
             </h2>
             <button 
               onClick={onClose}
@@ -133,6 +140,26 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Formulario *
+              </label>
+              <select
+                name="form_type"
+                value={formData.form_type}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary text-black"
+                style={{ backgroundColor: '#f9f9f9' }}
+                required
+              >
+                {FORM_TYPES_CONFIG.map(config => (
+                  <option key={config.type} value={config.type}>
+                    {config.label} - {config.description}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nombre *
               </label>
               <input
@@ -141,7 +168,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
                 value={formData.name}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary text-black"
-                placeholder="Nombre de la categoría"
+                placeholder="Nombre de la subcategoría"
                 style={{ backgroundColor: '#f9f9f9' }}
                 required
               />
@@ -157,7 +184,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
                 onChange={handleInputChange}
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary text-black"
-                placeholder="Descripción de la categoría (opcional)"
+                placeholder="Descripción de la subcategoría (opcional)"
                 style={{ backgroundColor: '#f9f9f9' }}
               />
             </div>
@@ -200,7 +227,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
                 className="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 disabled:opacity-50"
                 disabled={loading}
               >
-                {loading ? 'Guardando...' : editingCategory ? 'Actualizar Categoría' : 'Guardar Categoría'}
+                {loading ? 'Guardando...' : editingCategory ? 'Actualizar Subcategoría' : 'Guardar Subcategoría'}
               </button>
             </div>
           </form>

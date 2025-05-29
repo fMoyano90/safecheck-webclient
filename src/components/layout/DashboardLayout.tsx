@@ -129,8 +129,8 @@ function SidebarItems() {
     <div className="space-y-1">
       <SidebarItem href="/dashboard" icon="dashboard" label="Dashboard" />
       <SidebarItem href="/dashboard/admins" icon="users" label="Administradores" />
-      <SidebarItem href="/dashboard/categories" icon="tag" label="Categorías" />
-      <SidebarItem href="/dashboard/checklists" icon="clipboard" label="Checklists" />
+      <SidebarItem href="/dashboard/categories" icon="tag" label="Subcategorías" />
+      <SidebarItem href="/dashboard/forms" icon="clipboard" label="Formularios" />
       <SidebarItem href="/dashboard/workers" icon="users" label="Trabajadores" />
       <SidebarItem href="/dashboard/supervisors" icon="user-check" label="Supervisores" />
       <SidebarItem href="/dashboard/reports" icon="chart" label="Reportes" />

@@ -75,8 +75,10 @@ export interface TemplateStructure {
 }
 
 export enum TemplateType {
-  ART = 'art',
   CHECKLIST = 'checklist',
+  ART = 'art',
+  REPORTE = 'reporte',
+  ACTIVIDADES = 'actividades',
 }
 
 export interface Template {
@@ -86,11 +88,12 @@ export interface Template {
   type: TemplateType;
   structure: TemplateStructure;
   isActive: boolean;
-  categoryId: number;
+  subcategoryId: number;
   companyId: number;
-  category?: {
+  subcategory?: {
     id: number;
     name: string;
+    form_type: TemplateType;
   };
   createdAt: string;
   updatedAt: string;
@@ -101,7 +104,7 @@ export interface CreateTemplateData {
   description?: string;
   type: TemplateType;
   structure?: TemplateStructure;
-  categoryId: string;
+  subcategoryId: string;
 }
 
 export interface UpdateTemplateData {
@@ -109,11 +112,11 @@ export interface UpdateTemplateData {
   description?: string;
   type?: TemplateType;
   structure?: TemplateStructure;
-  categoryId?: string;
+  subcategoryId?: string;
 }
 
 export interface TemplateFilters {
-  categoryId?: string;
+  subcategoryId?: string;
   type?: TemplateType;
   isActive?: boolean;
 }
@@ -133,7 +136,7 @@ export async function getTemplates(filters?: TemplateFilters): Promise<Template[
   const queryParams = [];
   
   if (filters) {
-    if (filters.categoryId) queryParams.push(`categoryId=${filters.categoryId}`);
+    if (filters.subcategoryId) queryParams.push(`subcategoryId=${filters.subcategoryId}`);
     if (filters.type) queryParams.push(`type=${filters.type}`);
     if (filters.isActive !== undefined) queryParams.push(`isActive=${filters.isActive}`);
   }

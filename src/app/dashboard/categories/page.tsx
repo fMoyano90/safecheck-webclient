@@ -5,18 +5,20 @@ import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { isAuthenticated, isAdmin } from "@/lib/auth";
 import { getCategories } from "@/lib/api/categories";
-import { Category } from "@/types";
+import { Category, FORM_TYPES_CONFIG } from "@/types";
+import { TemplateType } from "@/lib/api/templates";
 import CategoryModal from "@/components/categories/CategoryModal";
 import CategoryList from "@/components/categories/CategoryList";
 
-export default function CategoriesPage() {
+export default function SubcategoriesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Category[]>([]);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [filterType, setFilterType] = useState<TemplateType | 'all'>('all');
 
   useEffect(() => {
     // Verificar autenticación y permisos de administrador
@@ -25,18 +27,18 @@ export default function CategoriesPage() {
       return;
     }
 
-    // Cargar categorías
-    fetchCategories();
+    // Cargar subcategorías
+    fetchSubcategories();
   }, [router]);
 
-  const fetchCategories = async () => {
+  const fetchSubcategories = async () => {
     try {
       setLoading(true);
       const categoriesData = await getCategories();
-      setCategories(categoriesData);
+      setSubcategories(categoriesData);
     } catch (err) {
-      console.error("Error al cargar categorías:", err);
-      const errorMessage = err instanceof Error ? err.message : "Error al cargar categorías";
+      console.error("Error al cargar subcategorías:", err);
+      const errorMessage = err instanceof Error ? err.message : "Error al cargar subcategorías";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -44,18 +46,18 @@ export default function CategoriesPage() {
   };
 
   const handleCategoryCreated = (newCategory: Category) => {
-    setCategories((prev) => [...prev, newCategory]);
-    setSuccess("Categoría creada exitosamente");
+    setSubcategories((prev) => [...prev, newCategory]);
+    setSuccess("Subcategoría creada exitosamente");
     setTimeout(() => setSuccess(""), 3000);
   };
 
   const handleCategoryUpdated = (updatedCategory: Category) => {
-    setCategories((prev) =>
+    setSubcategories((prev) =>
       prev.map((cat) =>
         cat.id === updatedCategory.id ? updatedCategory : cat
       )
     );
-    setSuccess("Categoría actualizada exitosamente");
+    setSuccess("Subcategoría actualizada exitosamente");
     setTimeout(() => setSuccess(""), 3000);
   };
 
@@ -69,21 +71,56 @@ export default function CategoriesPage() {
     setEditingCategory(null);
   };
 
+  const filteredSubcategories = filterType === 'all' 
+    ? subcategories 
+    : subcategories.filter(sub => sub.form_type === filterType);
+
+  const getFormTypeLabel = (type: TemplateType) => {
+    const config = FORM_TYPES_CONFIG.find(c => c.type === type);
+    return config?.label || type;
+  };
+
   return (
     <DashboardLayout>
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Categorías</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Subcategorías</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Administre las categorías para checklists y ARTs
+            Administre las subcategorías para diferentes tipos de formularios
           </p>
         </div>
         <button
           onClick={() => setIsCategoryModalOpen(true)}
           className="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90"
         >
-          Nueva Categoría
+          Nueva Subcategoría
         </button>
+      </div>
+
+      {/* Filtro por tipo de formulario */}
+      <div className="mb-6">
+        <div className="flex items-center space-x-4">
+          <span className="text-sm font-medium text-gray-700">Filtrar por tipo:</span>
+          <button
+            onClick={() => setFilterType('all')}
+            className={`px-3 py-1 rounded-md ${
+              filterType === 'all' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            Todos
+          </button>
+          {FORM_TYPES_CONFIG.map(config => (
+            <button
+              key={config.type}
+              onClick={() => setFilterType(config.type)}
+              className={`px-3 py-1 rounded-md ${
+                filterType === config.type ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'
+              }`}
+            >
+              {config.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && (
@@ -104,9 +141,11 @@ export default function CategoriesPage() {
         </div>
       ) : (
         <CategoryList 
-          categories={categories} 
+          categories={filteredSubcategories} 
           onEditCategory={handleEditCategory} 
-          onRefresh={fetchCategories}
+          onRefresh={fetchSubcategories}
+          showFormType={true}
+          getFormTypeLabel={getFormTypeLabel}
         />
       )}
 

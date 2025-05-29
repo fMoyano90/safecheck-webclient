@@ -1,6 +1,7 @@
 // API service para la gestión de categorías
 import { getAuthToken } from '../auth';
 import { Category } from '@/types';
+import { TemplateType } from './templates';
 
 // URL base para las peticiones a la API
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3030';
@@ -16,7 +17,8 @@ interface BackendCategory {
   isActive?: boolean;
   is_active?: boolean;
   updated_at: string;
-  [key: string]: string | number | boolean | undefined;
+  form_type: TemplateType; // Tipo de formulario al que pertenece
+  [key: string]: string | number | boolean | TemplateType | undefined;
 }
 
 // Función para transformar una categoría del backend al formato del frontend
@@ -27,7 +29,8 @@ const transformCategory = (category: BackendCategory): Category => {
   return {
     ...category,
     id: String(category.id), // Convertir id a string
-    is_active: activeStatus
+    is_active: activeStatus,
+    form_type: category.form_type
   };
 };
 
@@ -67,12 +70,13 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 /**
- * Crear una nueva categoría
+ * Crear una nueva subcategoría
  */
 export async function createCategory(data: {
   name: string;
   description?: string;
   color?: string;
+  form_type: TemplateType; // Tipo de formulario requerido
 }): Promise<Category> {
   const token = getAuthToken();
   
@@ -91,7 +95,7 @@ export async function createCategory(data: {
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Error al crear la categoría');
+    throw new Error(error.message || 'Error al crear la subcategoría');
   }
   
   const responseData = await response.json();
@@ -106,13 +110,14 @@ export async function createCategory(data: {
 }
 
 /**
- * Actualizar una categoría existente
+ * Actualizar una subcategoría existente
  */
 export async function updateCategory(id: number, data: {
   name?: string;
   description?: string;
   color?: string;
   isActive?: boolean;
+  form_type?: TemplateType; // Tipo de formulario opcional para actualización
 }): Promise<Category> {
   const token = getAuthToken();
   
@@ -125,7 +130,8 @@ export async function updateCategory(id: number, data: {
     name: data.name,
     description: data.description,
     color: data.color,
-    isActive: data.isActive
+    isActive: data.isActive,
+    form_type: data.form_type
   };
   
   try {
@@ -142,7 +148,7 @@ export async function updateCategory(id: number, data: {
       // Intentar obtener el mensaje de error del backend
       const errorData = await response.json().catch(() => ({}));
       console.error('Error de respuesta:', response.status, errorData);
-      throw new Error(errorData.message || `Error al actualizar la categoría: ${response.status}`);
+      throw new Error(errorData.message || `Error al actualizar la subcategoría: ${response.status}`);
     }
     
     const responseData = await response.json();
@@ -154,7 +160,7 @@ export async function updateCategory(id: number, data: {
       return responseData;
     }
   } catch (error) {
-    console.error('Error al actualizar categoría:', error);
+    console.error('Error al actualizar subcategoría:', error);
     throw error;
   }
 }
